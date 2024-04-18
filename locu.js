@@ -1005,15 +1005,14 @@ app.get("/api/v1/basiquee/recherche", (req, res) => {
   );
 });
 
-
-
 // recherche avancé 
 app.get("/api/v1/avance/recherche", (req, res) => {
+
   const { ville, meuble, surface, type, prix } = req.query;
 
   pool.query(
-    "SELECT annonce.idann, annonce.titre, annonce.description, annonce.date_ajout, annonce.image1, annonce.image2, annonce.image3, annonce.image4, annonce.image5, bien.type, bien.prix, bien.surface, annonce.iduser FROM annonce JOIN bien ON bien.idann = annonce.idann LEFT JOIN résidentiel ON résidentiel.idb = bien.idB LEFT JOIN industriel ON industriel.idb = bien.idB LEFT JOIN commercial ON commercial.idb = bien.idB LEFT JOIN terrain ON terrain.idb = bien.idB WHERE (résidentiel.meuble = ? OR résidentiel.meuble IS NULL) OR (industriel.meuble = ? OR industriel.meuble IS NULL) OR (commercial.meuble = ? OR commercial.meuble IS NULL) OR (terrain.meuble = ? OR terrain.meuble IS NULL)) AND bien.surface = ? AND bien.ville = ? AND bien.type = ? AND bien.prix <= ? ",
-    [meuble,meuble,meuble,meuble, surface, `%${ville}%`, type, prix],
+   " SELECT annonce.idann, annonce.titre, annonce.description, annonce.date_ajout, annonce.image1, annonce.image2, annonce.image3, annonce.image4, annonce.image5, bien.type, bien.prix, bien.surface, annonce.iduser FROM annonce JOIN bien ON bien.idann = annonce.idann LEFT JOIN résidentiel ON résidentiel.idb = bien.idB LEFT JOIN industriel ON industriel.idb = bien.idB LEFT JOIN commercial ON commercial.idb = bien.idB LEFT JOIN terrain ON terrain.idb = bien.idB WHERE ((résidentiel.meuble = ? OR résidentiel.meuble IS NULL) OR (industriel.meuble = ? OR industriel.meuble IS NULL) OR (commercial.meuble = ? OR commercial.meuble IS NULL) OR (terrain.meuble = ? OR terrain.meuble IS NULL)) AND bien.surface = ? AND bien.ville = ? AND bien.type = ? AND bien.prix <= ? ",
+    [meuble,meuble,meuble,meuble, surface, ville, type, prix],
     (error, result) => {
       if (error) {
         console.error(error);
