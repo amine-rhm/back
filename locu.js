@@ -986,23 +986,22 @@ app.get("/api/v1/recement/annonces", (req, res) => {
 app.get("/api/v1/basiquee/recherche", (req, res) => {
   const { ville, prix } = req.query; 
   if (!ville || !prix) {
-    return res.json({ error: "Veuillez fournir une ville et un prix." });
+      return res.json({ error: "Veuillez fournir une ville et un prix." });
   }
   pool.query(
-    "SELECT annonce.idann, annonce.titre, annonce.description, annonce.date_ajout, annonce.image1, annonce.image2, annonce.image3, annonce.image4, annonce.image5, annonce.iduser FROM annonce JOIN bien ON bien.idann = annonce.idann WHERE bien.ville = ? AND prix <= ?",
-    
-    [`%${ville}%`, prix],
-    (error, result) => {
-      if (error) {
-        console.error(error);
-        return res.json({ error: "Une erreur s'est produite lors de la recherche." });
-      } else {
-        res.json({
-          totalListing: result.length,
-          listing: result
-        });
+      "SELECT * FROM annonce JOIN bien ON bien.idann = annonce.idann WHERE bien.ville = ? AND bien.prix <= ?",
+      [ville, prix],
+      (error, result) => {
+          if (error) {
+              console.error(error);
+              return res.json({ error: "Une erreur s'est produite lors de la recherche." });
+          } else {
+              res.json({
+                  totalListing: result.length,
+                  listing: result
+              });
+          }
       }
-    }
   );
 });
 
