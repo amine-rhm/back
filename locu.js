@@ -982,7 +982,7 @@ app.get("/api/v1/recement/annonces", (req, res) => {
 });
 
 
-
+//recherche basique 
 app.get("/api/v1/basiquee/recherche", (req, res) => {
     const { ville, prix } = req.query; 
     if (!ville || !prix) {
@@ -1051,26 +1051,76 @@ app.get("/api/v1/basiquee/recherche", (req, res) => {
 
 // recherche avancé 
 app.get("/api/v1/avance/recherche", (req, res) => {
-
-  const { ville, meuble, surface, type, prix } = req.query;
-
+  const { ville, meuble, surface, type, prix } = req.query; 
+  if (!ville || !prix) {
+      return res.json({ error: "Veuillez fournir une ville et un prix." });
+  }
   pool.query(
-   " SELECT annonce.idann, annonce.titre, annonce.description, annonce.date_ajout, annonce.image1, annonce.image2, annonce.image3, annonce.image4, annonce.image5, bien.type, bien.prix, bien.surface, annonce.iduser FROM annonce JOIN bien ON bien.idann = annonce.idann LEFT JOIN résidentiel ON résidentiel.idb = bien.idB LEFT JOIN industriel ON industriel.idb = bien.idB LEFT JOIN commercial ON commercial.idb = bien.idB LEFT JOIN terrain ON terrain.idb = bien.idB WHERE ((résidentiel.meuble = ? OR résidentiel.meuble IS NULL) OR (industriel.meuble = ? OR industriel.meuble IS NULL) OR (commercial.meuble = ? OR commercial.meuble IS NULL) OR (terrain.meuble = ? OR terrain.meuble IS NULL)) AND bien.surface = ? AND bien.ville = ? AND bien.type = ? AND bien.prix <= ? ",
-    [meuble,meuble,meuble,meuble, surface, ville, type, prix],
-    (error, result) => {
-      if (error) {
-        console.error(error);
-        res.send("Une erreur s'est produite lors de la recherche.");
-      } else {
-        res.send({
-          totalListing: result.length,
-          listing: result
-        });
+      "SELECT \
+          CASE \
+              WHEN bien.type = 'Terrain' THEN JSON_OBJECT('categorie', terrain.categorie, 'largeur', terrain.largeur, 'longueur', terrain.longueur) \
+              WHEN bien.type = 'Industriel' THEN JSON_OBJECT('puissance', industriel.puissance, 'materiel', industriel.materiel, 'taille', industriel.taille) \
+              WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Maison' THEN JSON_OBJECT('etage_maison', maison.etage_maison, 'meuble', résidentiel.meuble, 'équipement', résidentiel.équipement, 'type_residence', résidentiel.type_residence) \
+              WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'équipement', résidentiel.équipement, 'type_residence', résidentiel.type_residence) \
+              WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'équipement', résidentiel.équipement, 'type_residence', résidentiel.type_residence) \
+              WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'équipement', résidentiel.équipement, 'type_residence', résidentiel.type_residence) \
+              WHEN bien.type = 'Commercial' THEN JSON_OBJECT('equipement', commercial.equipement, 'etage', commercial.etage) \
+              ELSE JSON_OBJECT() \
+          END AS selected_data, \
+          annonce.titre, \
+          annonce.description, \
+          annonce.date_ajout, \
+          annonce.image1, \
+          annonce.image2, \
+          annonce.image3, \
+          annonce.image4, \
+          annonce.image5, \
+          annonce.iduser, \
+          bien.idB, \
+          bien.type, \
+          bien.surface, \
+          bien.prix, \
+          bien.userId, \
+          bien.idann, \
+          bien.ville, \
+          bien.adresse \
+      FROM bien \
+      INNER JOIN annonce ON bien.idann = annonce.idann \
+      LEFT JOIN terrain ON bien.idB = terrain.idb \
+      LEFT JOIN industriel ON bien.idB = industriel.idb \
+      LEFT JOIN résidentiel ON bien.idB = résidentiel.idb \
+      LEFT JOIN commercial ON bien.idB = commercial.idb \
+      LEFT JOIN maison ON maison.idres = résidentiel.idres \
+      LEFT JOIN villa ON villa.idres = résidentiel.idres \
+      LEFT JOIN studio ON studio.idres = résidentiel.idres \
+      LEFT JOIN appartement ON appartement.idres = résidentiel.idres \
+      WHERE ((résidentiel.meuble = ? OR résidentiel.meuble IS NULL) OR \
+             (industriel.meuble = ? OR industriel.meuble IS NULL) OR \
+             (commercial.meuble = ? OR commercial.meuble IS NULL) OR \
+             (terrain.meuble = ? OR terrain.meuble IS NULL)) \
+        AND bien.surface = ? \
+        AND bien.ville = ? \
+        AND bien.type = ? \
+        AND bien.prix <= ?",
+      [meuble, meuble, meuble, meuble, surface, ville, type, prix],
+      (error, result) => {
+          if (error) {
+              console.error(error);
+              return res.json({ error: "Une erreur s'est produite lors de la recherche." });
+          } else {
+
+            result.forEach(item => {
+              item.selected_data = JSON.parse(item.selected_data);
+          });
+              const response = {
+                  totalListing: result.length,
+                  listing: result
+              };
+              res.json(response);
+          }
       }
-    }
   );
 });
-
 
 app.get("/api/v1/info/pr/annonce", async (request, response) => {
   try {
