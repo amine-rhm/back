@@ -1,0 +1,26 @@
+const jwt = require("jsonwebtoken");
+const dotenv = require("dotenv");
+dotenv.config();
+
+const auth = (req, res, next) => {
+  try {
+    const token = req.cookies.accessToken || req.headers.authorization.split(" ")[1];
+    if (!token) {
+      return res.json({ message: "Token non fourni" });
+    }
+
+    jwt.verify(token, process.env.jwtSecret, (err, userData ) => {
+      if (err) {
+        console.error("Erreur de vérification du token:", err);
+        return res.json({ message: "Token invalide" });
+      }
+      req.userData = userData;
+      next();
+    });
+  } catch (error) {
+    console.error("Erreur lors de la vérification du token:", error);
+    return res.json({ message: "Erreur serveur lors de la vérification du token" });
+  }
+};
+
+module.exports = auth;
