@@ -53,6 +53,7 @@ pool.connect((err) => {
   }
 });
 
+
 saltOrRounds=10;
 app.post("/api/v1/register", (req, res) => {
   try {
@@ -93,7 +94,7 @@ app.post("/api/v1/register", (req, res) => {
           // Ajout des données dans la table client
           pool.query(
             "INSERT INTO client (iduser, nom, prenom, email,num) VALUES (?, ?, ?, ?,?)",
-            [userId, nom, prenom,num, email],
+            [userId, nom, prenom,email,num],
             (err, result) => {
               if (err) {
                 console.error("Erreur d'insertion dans la table client:", err);
@@ -636,6 +637,7 @@ function removeNullValues(obj) {
   }
   return newObj;
 }
+
 // recuperer jusqua le type de bien 
 app.get("/api/v1/info/annonce/:id", async (request, response) => {
   try {
@@ -952,10 +954,7 @@ else if (result[0].type === 'Résidentiel' && result[0].résidentiel_residence =
   }
 });
 
-
-
  //section recement ajouter , recuperere les dernier annonce ajouter.
-
 app.get("/api/v1/recement/annonces", (req, res) => {
   try {
     pool.query(
@@ -971,7 +970,7 @@ app.get("/api/v1/recement/annonces", (req, res) => {
         // Triez les annonces par ID 1 2 3 4 5 
         result.sort((a, b) => b.idann - a.idann);
         // dayi labghit 3 4 lsl atan 12 aka
-        const dixDernieresAnnonces = result.slice(0, 3);
+        const dixDernieresAnnonces = result.slice(0, 12);
         res.json({ annonces: dixDernieresAnnonces });
       }
     );
@@ -981,8 +980,6 @@ app.get("/api/v1/recement/annonces", (req, res) => {
   }
 });
 
-
-//recherche basique 
 app.get("/api/v1/basiquee/recherche", (req, res) => {
     const { ville, prix } = req.query; 
     if (!ville || !prix) {
@@ -1034,7 +1031,7 @@ app.get("/api/v1/basiquee/recherche", (req, res) => {
                 console.error(error);
                 return res.json({ error: "Une erreur s'est produite lors de la recherche." });
             } else {
-                // Convertir la chaîne JSON en objet JavaScript
+               
                 result.forEach(item => {
                     item.selected_data = JSON.parse(item.selected_data);
                 });
@@ -1047,7 +1044,6 @@ app.get("/api/v1/basiquee/recherche", (req, res) => {
         }
     );
 });
-
 
 // recherche avancé 
 app.get("/api/v1/avance/recherche", (req, res) => {
@@ -1098,10 +1094,10 @@ app.get("/api/v1/avance/recherche", (req, res) => {
              (industriel.meuble = ? OR industriel.meuble IS NULL) OR \
              (commercial.meuble = ? OR commercial.meuble IS NULL) OR \
              (terrain.meuble = ? OR terrain.meuble IS NULL)) \
-        AND bien.surface = ? \
+        AND bien.surface = ?\
         AND bien.ville = ? \
-        AND bien.type = ? \
-        AND bien.prix <= ?",
+        AND bien.type = ?  \
+        AND bien.prix <= ? ",
       [meuble, meuble, meuble, meuble, surface, ville, type, prix],
       (error, result) => {
           if (error) {
@@ -1122,6 +1118,7 @@ app.get("/api/v1/avance/recherche", (req, res) => {
   );
 });
 
+// afficher le tout meme les table maison ....
 app.get("/api/v1/info/pr/annonce", async (request, response) => {
   try {
     await pool.query(
@@ -1189,32 +1186,42 @@ app.get("/api/v1/info/pr/annonce", async (request, response) => {
 
 
 
+app.post("/api/v1/favoris", (req, res) => {
+
+  const { titre, description, image1, image2, image3, image4, image5, ville, adresse, prix } = req.body;
+
+  pool.query(
+    "INSERT INTO favoris (titre, description, image1, image2, image3, image4, image5, ville, adresse, prix) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+    [titre, description, image1, image2, image3, image4, image5, ville, adresse, prix],
+    (error, result) => {
+      if (error) {
+        console.error(error);
+        res.json({ error: "Une erreur s'est produite lors de l'ajout de l'annonce aux favoris." });
+        return;
+      }
+
+      res.json({ success: true, message: "Annonce ajoutée aux favoris avec succès." });
+    }
+  );
+});
 
 
 
 
+app.get("/api/v1/favoris", (req, res) => {
+  pool.query(
+    "SELECT * FROM favoris",
+    (error, results) => {
+      if (error) {
+        console.error(error);
+        res.json({ error: "Une erreur s'est produite lors de la récupération des annonces favorites." });
+        return;
+      }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+      res.json({ favoris: results });
+    }
+  );
+});
 
 
 
