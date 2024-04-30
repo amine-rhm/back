@@ -332,7 +332,7 @@ app.post('/api/v1/new/annonce',auth, upload.array('file', 5), async (req, res) =
     const image5 = req.files[4] ? req.files[4].filename : null;
    
     const dateAjout = new Date();
-    const { type, surface, adresse, prix, titre, description, meuble, equipment, ville, capacite, puissance, materiel, taille ,etage,categorie, largeur, longueur,type_residence,etage_maison,etage_villa, type_villa, type_appartement} = req.body;
+    const { type, surface, adresse, prix, titre, description, meuble, equipement, ville, capacite, puissance, materiel, taille ,etage,categorie, largeur, longueur,type_residence,etage_maison,etage_villa, type_villa, type_appartement} = req.body;
 
     if (!titre || !description || !prix || !description || !adresse) {
       return res.send({ message: "Ces champs sont requis."});
@@ -347,7 +347,7 @@ app.post('/api/v1/new/annonce',auth, upload.array('file', 5), async (req, res) =
     // Insérer dans la table Bien si nécessaire
     const idB = uuidv4();
     await pool.query(
-      "INSERT INTO Bien (idB,type,surface,prix,ville,adresse,userId,idann) VALUES (?,?, ?, ?, ?, ?, ?,?)",
+      "INSERT INTO bien (idB,type,surface,prix,ville,adresse,userId,idann) VALUES (?,?, ?, ?, ?, ?, ?,?)",
       [idB, type,surface, prix,ville,adresse,userId, idann]
     );
     console.log("bien inserrer dans la table bien",idB)
@@ -357,8 +357,8 @@ app.post('/api/v1/new/annonce',auth, upload.array('file', 5), async (req, res) =
     if (type === "Résidentiel") {
         idres = uuidv4(); 
         await pool.query(
-            "INSERT INTO résidentiel (idres, meuble,equipment, type_residence, idb) VALUES (?, ?, ?, ?, ?)",
-            [idres, meuble,equipment,type_residence, idB]
+            "INSERT INTO résidentiel (idres, meuble,equipement, type_residence, idb) VALUES (?, ?, ?, ?, ?)",
+            [idres, meuble,equipement,type_residence, idB]
         );
 
         console.log("Bien inséré dans la table résidentiel", idres); 
@@ -397,7 +397,7 @@ app.post('/api/v1/new/annonce',auth, upload.array('file', 5), async (req, res) =
     if (type === "Industriel") {
        idIndu = uuidv4();
       await pool.query(
-          "INSERT INTO Industriel (idIndu, capacite, puissance, materiel, taille,idb) VALUES (?, ?, ?, ?, ?, ?)",
+          "INSERT INTO industriel (idIndu, capacite, puissance, materiel, taille,idb) VALUES (?, ?, ?, ?, ?, ?)",
           [idIndu, capacite, puissance,materiel, taille,idB]
       );
       console.log("bien inserrer dans la table Industriel", idIndu,idB);
@@ -408,8 +408,8 @@ app.post('/api/v1/new/annonce',auth, upload.array('file', 5), async (req, res) =
     if (type === "Commercial") {
       idComm = uuidv4();
       await pool.query(
-          "INSERT INTO Commercial (idComm, equipement, etage,idb) VALUES (?, ?, ?, ?)",
-          [idComm,equipment, etage,idB]
+          "INSERT INTO commercial (idComm, equipement, etage,idb) VALUES (?, ?, ?, ?)",
+          [idComm,equipement, etage,idB]
       );
       console.log("bien insérer dans la table Commercial", idComm);
   }
@@ -417,7 +417,7 @@ app.post('/api/v1/new/annonce',auth, upload.array('file', 5), async (req, res) =
   if (type === "Terrain") {
     idTerr = uuidv4();
     await pool.query(
-        "INSERT INTO Terrain (idTerr, categorie, largeur, longueur,idb) VALUES (?, ?, ?, ?, ?)",
+        "INSERT INTO terrain (idTerr, categorie, largeur, longueur,idb) VALUES (?, ?, ?, ?, ?)",
         [idTerr, categorie, largeur, longueur,idB]
     );
     console.log("bien insérer dans la table Terrain", idTerr,idB);
@@ -1188,11 +1188,11 @@ app.get("/api/v1/info/pr/annonce", async (request, response) => {
 
 app.post("/api/v1/favoris", (req, res) => {
 
-  const { titre, description, image1, image2, image3, image4, image5, ville, adresse, prix } = req.body;
+  const {idann,titre, description, image1, image2, image3, image4, image5, ville, adresse, prix ,meuble, surface, type,type_residence} = req.body;
 
   pool.query(
-    "INSERT INTO favoris (titre, description, image1, image2, image3, image4, image5, ville, adresse, prix) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-    [titre, description, image1, image2, image3, image4, image5, ville, adresse, prix],
+    "INSERT INTO favoris (idann,titre, description, image1, image2, image3, image4, image5, ville, adresse, prix,meuble,surface,type,type_residence) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?,?)",
+    [idann,titre, description, image1, image2, image3, image4, image5, ville, adresse, prix,meuble,surface,type,type_residence],
     (error, result) => {
       if (error) {
         console.error(error);
@@ -1204,8 +1204,6 @@ app.post("/api/v1/favoris", (req, res) => {
     }
   );
 });
-
-
 
 
 app.get("/api/v1/favoris", (req, res) => {
@@ -1223,6 +1221,24 @@ app.get("/api/v1/favoris", (req, res) => {
   );
 });
 
+
+
+app.delete("/api/v1/favoris", (req, res) => {
+         const idann = req.body
+  pool.query(
+
+    "DELETE FROM favoris WHERE idann=? ",
+    (error, results) => {
+      if (error) {
+        console.error(error);
+        res.json({ error: "Une erreur s'est produite lors de la suppresion de l'annonces favorite." });
+        return;
+      }
+       console.log("bien supprimer dans la tabla favoris")
+      res.json({ deletedannonce: results });
+    }
+  );
+});
 
 
 
