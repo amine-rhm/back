@@ -94,7 +94,7 @@ app.post("/api/v1/register", (req, res) => {
           // Ajout des données dans la table client
           pool.query(
             "INSERT INTO client (iduser, nom, prenom, email,num) VALUES (?, ?, ?, ?,?)",
-            [userId, nom, prenom,email,num],
+            [userId, nom, prenom,num, email],
             (err, result) => {
               if (err) {
                 console.error("Erreur d'insertion dans la table client:", err);
@@ -131,7 +131,6 @@ app.post("/api/v1/register", (req, res) => {
     res.json({ error: "Erreur interne du serveur" });
   }
 });
-
   app.post("/api/v1/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
