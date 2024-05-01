@@ -798,6 +798,10 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
       bien.idann,
       bien.ville,
       bien.adresse,
+      client.nom,
+      client.prenom,
+      client.num,
+      client.email,
       résidentiel.meuble AS résidentiel_meuble,
 
       résidentiel.équipement AS résidentiel_équipement,
@@ -827,6 +831,7 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
      appartement.type_appartement AS appartement_type
     FROM bien
     INNER JOIN annonce ON bien.idann = annonce.idann
+    left join client on client.iduser = annonce.iduser
     LEFT JOIN terrain ON bien.idB = terrain.idb
     LEFT JOIN industriel ON bien.idB = industriel.idb
     LEFT JOIN résidentiel ON bien.idB = résidentiel.idb
@@ -864,6 +869,10 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
           idann: result[0].idann,
           adresse:result[0].adresse,
           ville:result[0].ville,
+          nom:result[0].nom,
+          prenom:result[0].prenom,
+          num:result[0].num,
+          email:result[0].email,
           bien_details: {}
         };
 
@@ -952,6 +961,7 @@ else if (result[0].type === 'Résidentiel' && result[0].résidentiel_residence =
     response.json({ error: "Une erreur s'est produite lors de la récupération des détails de l'annonce." });
   }
 });
+
 
  //section recement ajouter , recuperere les dernier annonce ajouter.
 app.get("/api/v1/recement/annonces", (req, res) => {
