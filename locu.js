@@ -860,7 +860,6 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
           image3: result[0].image3,
           image4: result[0].image4,
           image5: result[0].image5,
-          iduser: result[0].iduser,
           idB: result[0].idB,
           type: result[0].type,
           surface: result[0].surface,
@@ -868,11 +867,15 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
           userId: result[0].userId,
           idann: result[0].idann,
           adresse:result[0].adresse,
-          ville:result[0].ville,
-          nom:result[0].nom,
-          prenom:result[0].prenom,
-          num:result[0].num,
-          email:result[0].email,
+          ville:result[0].ville, 
+          users_details: {
+            iduser: result[0].iduser,
+            nom:result[0].nom,
+            prenom:result[0].prenom,
+            num:result[0].num,
+            email:result[0].email
+          },
+
           bien_details: {}
         };
 
@@ -961,6 +964,8 @@ else if (result[0].type === 'Résidentiel' && result[0].résidentiel_residence =
     response.json({ error: "Une erreur s'est produite lors de la récupération des détails de l'annonce." });
   }
 });
+
+
 
 
  //section recement ajouter , recuperere les dernier annonce ajouter.
