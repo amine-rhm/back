@@ -54,6 +54,7 @@ pool.connect((err) => {
 });
 
 
+
 saltOrRounds=10;
 app.post("/api/v1/register", (req, res) => {
   try {
@@ -93,7 +94,7 @@ app.post("/api/v1/register", (req, res) => {
 
           // Ajout des données dans la table client
           pool.query(
-            "INSERT INTO client (iduser, nom, prenom, email,num) VALUES (?, ?, ?, ?,?)",
+            "INSERT INTO client (iduser, nom, prenom,num,email) VALUES (?, ?, ?, ?,?)",
             [userId, nom, prenom,num, email],
             (err, result) => {
               if (err) {
@@ -131,6 +132,7 @@ app.post("/api/v1/register", (req, res) => {
     res.json({ error: "Erreur interne du serveur" });
   }
 });
+
   app.post("/api/v1/login", (req, res) => {
   const email = req.body.email;
   const password = req.body.password;
@@ -182,7 +184,7 @@ app.get("/api/v1/verif", auth, async (req, res) => {
       return res.json({ message: "Utilisateur non trouvé dans la base de données" });
     }
     res.json({ message: "Token valide" });
-    console.log(userId); // Affiche à nouveau l'ID de l'utilisateur dans la console
+    console.log(userId); 
   } catch (error) {
     console.error("Erreur lors de la vérification du token avec l'ID de l'utilisateur:", error);
     res.json({ message: "Erreur serveur lors de la vérification du token avec l'ID de l'utilisateur" });
@@ -609,6 +611,7 @@ app.get("/api/v1/single/whithinfoclient/annonces/:id", async (request, response)
       "SELECT annonce.idann, annonce.titre, annonce.description, annonce.date_ajout, annonce.image1, annonce.image2, annonce.image3, annonce.image4, annonce.image5, annonce.iduser, client.nom, client.prenom,client.num, client.email FROM annonce INNER JOIN client ON annonce.iduser = client.iduser WHERE annonce.idann = ?",
       [annid],
       (err, result) => {
+        
         if (err) {
           console.error(err);
           return response.json({ error: "Une erreur s'est produite lors de la récupération des détails de l'annonce." });
@@ -616,6 +619,8 @@ app.get("/api/v1/single/whithinfoclient/annonces/:id", async (request, response)
         if (result.length === 0) {
           return response.json({ error: "Aucune annonce trouvée avec l'identifiant spécifié." });
         }
+
+        
         response.json(result[0]);
       }
     );
@@ -754,6 +759,7 @@ app.get("/api/v1/info/annonce/:id", async (request, response) => {
         }
         
         response.json(formattedData);
+
         
       }
     );
@@ -803,32 +809,24 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
       client.num,
       client.email,
       résidentiel.meuble AS résidentiel_meuble,
-
       résidentiel.équipement AS résidentiel_équipement,
-   
       résidentiel.type_residence AS résidentiel_residence,
       commercial.equipement AS commercial_equipement,
       commercial.etage AS commercial_etage,
- 
       commercial.meuble AS commercial_meuble,
-   
       industriel.capacite AS industriel_capacite,
       industriel.puissance AS industriel_puissance,
       industriel.materiel AS industriel_materiel,
       industriel.taille  AS industriel_taille,
-      
       industriel.meuble AS industriel_meuble,
-  
       terrain.categorie AS terrain_categorie,
       terrain.largeur AS terrain_largeur,
       terrain.longueur AS terrain_longueur,
-
       terrain.meuble AS terrain_meuble,
-   
       maison.etage_maison AS maison_etage,
       villa.etage_villa AS villa_etage,
       villa.type_villa AS villa_type,
-     appartement.type_appartement AS appartement_type
+      appartement.type_appartement AS appartement_type
     FROM bien
     INNER JOIN annonce ON bien.idann = annonce.idann
     left join client on client.iduser = annonce.iduser
@@ -855,27 +853,28 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
           titre: result[0].titre,
           description: result[0].description,
           date_ajout: result[0].date_ajout,
-          image1: result[0].image1,
-          image2: result[0].image2,
-          image3: result[0].image3,
-          image4: result[0].image4,
-          image5: result[0].image5,
+          images: [
+            result[0].image1,
+            result[0].image2,
+            result[0].image3,
+            result[0].image4,
+            result[0].image5
+          ].filter(Boolean),
           idB: result[0].idB,
           type: result[0].type,
           surface: result[0].surface,
           prix: result[0].prix,
           userId: result[0].userId,
           idann: result[0].idann,
-          adresse:result[0].adresse,
-          ville:result[0].ville, 
+          adresse: result[0].adresse,
+          ville: result[0].ville,
           users_details: {
             iduser: result[0].iduser,
-            nom:result[0].nom,
-            prenom:result[0].prenom,
-            num:result[0].num,
-            email:result[0].email
+            nom: result[0].nom,
+            prenom: result[0].prenom,
+            num: result[0].num,
+            email: result[0].email
           },
-
           bien_details: {}
         };
 
@@ -884,78 +883,54 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
             categorie: result[0].terrain_categorie,
             largeur: result[0].terrain_largeur,
             longueur: result[0].terrain_longueur,
-       
             meuble: result[0].terrain_meuble
-         
           });
-         } 
-  else if (result[0].type === 'Industriel') {
+        } else if (result[0].type === 'Industriel') {
           formattedData.bien_details.industriel = removeNullValues({
             capacite: result[0].industriel_capacite,
             puissance: result[0].industriel_puissance,
             materiel: result[0].industriel_materiel,
             taille: result[0].industriel_taille,
-    
             meuble: result[0].industriel_meuble
-      
           });
-          } 
- else if (result[0].type === 'Résidentiel'&& result[0].résidentiel_residence === 'Villa') {
+        } else if (result[0].type === 'Résidentiel' && result[0].résidentiel_residence === 'Villa') {
           formattedData.bien_details.résidentiel = removeNullValues({
             meuble: result[0].résidentiel_meuble,
-        
             équipement: result[0].résidentiel_équipement,
-       
             type_residence: result[0].résidentiel_residence,
             etage_villa: result[0].villa_etage,
             type_villa: result[0].villa_type
           });
-          }
-        
-else if (result[0].type === 'Résidentiel' && result[0].résidentiel_residence ==='Appartement'){
+        } else if (result[0].type === 'Résidentiel' && result[0].résidentiel_residence === 'Appartement') {
           formattedData.bien_details.résidentiel = removeNullValues({
             meuble: result[0].résidentiel_meuble,
-  
             équipement: result[0].résidentiel_équipement,
-           
             type_residence: result[0].résidentiel_residence,
             type_appartement: result[0].appartement_type
-
           });
-          }
- else if (result[0].type === 'Résidentiel' && result[0].résidentiel_residence ==='Maison'){
+        } else if (result[0].type === 'Résidentiel' && result[0].résidentiel_residence === 'Maison') {
           formattedData.bien_details.résidentiel = removeNullValues({
             meuble: result[0].résidentiel_meuble,
-      
             équipement: result[0].résidentiel_équipement,
-    
             type_residence: result[0].résidentiel_residence,
             type_appartement: result[0].appartement_type,
             etage_maison: result[0].maison_etage
-
           });
-           } 
- else if (result[0].type === 'Résidentiel' && result[0].résidentiel_residence ==='Stodio'){
+        } else if (result[0].type === 'Résidentiel' && result[0].résidentiel_residence === 'Studio') {
           formattedData.bien_details.résidentiel = removeNullValues({
             meuble: result[0].résidentiel_meuble,
-        
             équipement: result[0].résidentiel_équipement,
- 
             type_residence: result[0].résidentiel_residence,
             type_appartement: result[0].appartement_type,
             etage_maison: result[0].maison_etage
-
           });
-          } 
- else if (result[0].type === 'Commercial') {
+        } else if (result[0].type === 'Commercial') {
           formattedData.bien_details.commercial = removeNullValues({
             equipement: result[0].commercial_equipement,
             etage: result[0].commercial_etage,
-       
             meuble: result[0].commercial_meuble
-     
           });
-          }
+        }
         response.json(formattedData);
       }
     );
@@ -964,7 +939,6 @@ else if (result[0].type === 'Résidentiel' && result[0].résidentiel_residence =
     response.json({ error: "Une erreur s'est produite lors de la récupération des détails de l'annonce." });
   }
 });
-
 
 
 
@@ -1253,6 +1227,203 @@ app.delete("/api/v1/favoris", (req, res) => {
     }
   );
 });
+
+app.get("/api/v1/ville/annonces/:ville", async (request, response) => {
+  try {
+    const ville = request.params.ville;
+    await pool.query(
+      `SELECT
+        CASE
+          WHEN bien.type = 'Terrain' THEN JSON_OBJECT('categorie', terrain.categorie, 'largeur', terrain.largeur, 'longueur', terrain.longueur)
+          WHEN bien.type = 'Industriel' THEN JSON_OBJECT('puissance', industriel.puissance, 'materiel', industriel.materiel, 'taille', industriel.taille)
+          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Maison' THEN JSON_OBJECT('etage_maison', maison.etage_maison, 'meuble', résidentiel.meuble, 'équipement', résidentiel.équipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'équipement', résidentiel.équipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'équipement', résidentiel.équipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'équipement', résidentiel.équipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Commercial' THEN JSON_OBJECT('equipement', commercial.equipement, 'etage', commercial.etage)
+          ELSE JSON_OBJECT()
+        END AS selected_data,
+        annonce.titre, 
+        annonce.description, 
+        annonce.date_ajout, 
+        annonce.image1, 
+        annonce.image2, 
+        annonce.image3, 
+        annonce.image4, 
+        annonce.image5, 
+        annonce.iduser, 
+        bien.idB, 
+        bien.type, 
+        bien.surface, 
+        bien.prix, 
+        bien.userId, 
+        bien.idann,
+        bien.ville,
+        bien.adresse,
+        terrain.categorie AS terrain_categorie,
+        terrain.largeur AS terrain_largeur,
+        terrain.longueur AS terrain_longueur,
+        industriel.puissance AS industriel_puissance,
+        industriel.materiel AS industriel_materiel,
+        industriel.taille AS industriel_taille,
+        maison.etage_maison AS maison_etage_maison,
+        résidentiel.meuble AS résidentiel_meuble,
+        résidentiel.équipement AS résidentiel_équipement,
+        résidentiel.type_residence AS résidentiel_residence,
+        villa.etage_villa AS villa_etage_villa,
+        villa.type_villa AS villa_type_villa,
+        studio.idStu AS studio_idStu,
+        appartement.type_appartement AS appartement_type_appartement,
+        commercial.equipement AS commercial_equipement,
+        commercial.etage AS commercial_etage
+      FROM bien
+      INNER JOIN annonce ON bien.idann = annonce.idann
+      LEFT JOIN terrain ON bien.idB = terrain.idb
+      LEFT JOIN industriel ON bien.idB = industriel.idb
+      LEFT JOIN résidentiel ON bien.idB = résidentiel.idb
+      LEFT JOIN commercial ON bien.idB = commercial.idb
+      LEFT JOIN maison ON maison.idres = résidentiel.idres
+      LEFT JOIN villa ON villa.idres = résidentiel.idres
+      LEFT JOIN studio ON studio.idres = résidentiel.idres
+      LEFT JOIN appartement ON appartement.idres = résidentiel.idres
+      WHERE bien.ville = ?`,
+      [ville],
+      (err, result) => {
+        if (err) {
+          console.error(err);
+          return response.status(500).json({ error: "Une erreur s'est produite lors de la récupération des détails de l'annonce." });
+        }
+        if (result.length === 0) {
+          return response.json({ error: "Aucune annonce trouvée avec la ville spécifiée." });
+        }
+        // Formater les données
+        const formattedData = result.map(row => {
+          const images = [];
+          for (let i = 1; i <= 5; i++) {
+            if (row[`image${i}`]) {
+              images.push(row[`image${i}`]);
+            }
+          }
+          let selectedData;
+          switch (row.type) {
+            case 'Terrain':
+              selectedData = {
+                categorie: row.terrain_categorie,
+                largeur: row.terrain_largeur,
+                longueur: row.terrain_longueur
+              };
+              break;
+            case 'Industriel':
+              selectedData = {
+                puissance: row.industriel_puissance,
+                materiel: row.industriel_materiel,
+                taille: row.industriel_taille
+              };
+              break;
+            case 'Résidentiel':
+              switch (row.résidentiel_residence) {
+                case 'Maison':
+                  selectedData = {
+                    etage_maison: row.maison_etage_maison,
+                    meuble: row.résidentiel_meuble,
+                    équipement: row.résidentiel_équipement,
+                    type_residence: row.résidentiel_residence
+                  };
+                  break;
+                case 'Villa':
+                  selectedData = {
+                    etage_villa: row.villa_etage_villa,
+                    type_villa: row.villa_type_villa,
+                    meuble: row.résidentiel_meuble,
+                    équipement: row.résidentiel_équipement,
+                    type_residence: row.résidentiel_residence
+                  };
+                  break;
+                case 'Studio':
+                  selectedData = {
+                    idStu: row.studio_idStu,
+                    meuble: row.résidentiel_meuble,
+                    équipement: row.résidentiel_équipement,
+                    type_residence: row.résidentiel_residence
+                  };
+                  break;
+                case 'Appartement':
+                  selectedData = {
+                    type_appartement: row.appartement_type_appartement,
+                    meuble: row.résidentiel_meuble,
+                    équipement: row.résidentiel_équipement,
+                    type_residence: row.résidentiel_residence
+                  };
+                  break;
+                default:
+                  selectedData = {};
+              }
+              break;
+            case 'Commercial':
+              selectedData = {
+                equipement: row.commercial_equipement,
+                etage: row.commercial_etage
+              };
+              break;
+            default:
+              selectedData = {};
+          }
+
+          return {
+            titre: row.titre,
+            description: row.description,
+            date_ajout: row.date_ajout,
+            images: images,
+            iduser: row.iduser,
+            idB: row.idB,
+            type: row.type,
+            surface: row.surface,
+            prix: row.prix,
+            userId: row.userId,
+            idann: row.idann,
+            adresse: row.adresse,
+            ville: row.ville,
+            bien_details: selectedData
+          };
+        });
+        response.json(formattedData);
+      }
+    );
+  } catch (error) {
+    console.error(error);
+    response.json({ error: "Une erreur s'est produite lors de la récupération des détails de l'annonce." });
+  }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
