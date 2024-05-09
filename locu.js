@@ -1240,11 +1240,17 @@ app.get("/api/v1/info/pr/annonce", async (request, response) => {
 
 app.post("/api/v1/favoris", (req, res) => {
 
-  const {idann,titre, description, image1, image2, image3, image4, image5, ville, adresse, prix ,meuble, surface, type,type_residence} = req.body;
+    const image1 = req.files[0].filename;  
+    const image2 = req.files[1] ? req.files[1].filename : null;
+    const image3 = req.files[2] ? req.files[2].filename : null;
+    const image4 = req.files[3] ? req.files[3].filename : null;
+    const image5 = req.files[4] ? req.files[4].filename : null;
+
+  const {idann,titre, description, ville,prix ,meuble, surface, type,type_residence} = req.body;
 
   pool.query(
     "INSERT INTO favoris (idann,titre, description, image1, image2, image3, image4, image5, ville, adresse, prix,meuble,surface,type,type_residence) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?,?)",
-    [idann,titre, description, image1, image2, image3, image4, image5, ville, adresse, prix,meuble,surface,type,type_residence],
+    [idann,titre, description, image1, image2, image3, image4, image5, ville, prix,meuble,surface,type,type_residence],
     (error, result) => {
       if (error) {
         console.error(error);
@@ -1258,9 +1264,10 @@ app.post("/api/v1/favoris", (req, res) => {
 });
 
 
+
 app.get("/api/v1/favoris", (req, res) => {
   pool.query(
-    "SELECT * FROM favoris",
+    "SELECT * FROM favoris INNER JOIN client ON iduser = idc; ",
     (error, results) => {
       if (error) {
         console.error(error);
@@ -1291,6 +1298,8 @@ app.delete("/api/v1/favoris", (req, res) => {
     }
   );
 });
+
+
 
 // ville de bien ( pour la page home)
 
