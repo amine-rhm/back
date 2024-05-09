@@ -4,22 +4,30 @@ dotenv.config();
 
 const auth = (req, res, next) => {
   try {
-    const token = req.cookies.accessToken || req.headers.authorization.split(" ")[1];
-    if (!token) {
-      return res.json({ message: "Token non fourni" });
+    let token;
+    const authHeader = req.headers.authorization;
+    
+    if (authHeader && authHeader.startsWith("Bearer")) {
+      token = authHeader.split(" ")[1];
+    } else {
+      // Si aucun token n'est fourni dans l'en-tête Authorization
+      return res.status(401).json({ message: "Token non fourni" });
     }
 
-    jwt.verify(token, process.env.jwtSecret, (err, userData ) => {
+    jwt.verify(token, process.env.jwtSecret, (err, userData) => {
       if (err) {
+        // Si le token est invalide
         console.error("Erreur de vérification du token:", err);
-        return res.json({ message: "Token invalide" });
+        return res.status(401).json({ message: "Token invalide" });
       }
+      // Si le token est valide, stocker les données utilisateur dans req.userData
       req.userData = userData;
       next();
     });
   } catch (error) {
+    // En cas d'erreur lors de la vérification du token
     console.error("Erreur lors de la vérification du token:", error);
-    return res.json({ message: "Erreur serveur lors de la vérification du token" });
+    return res.status(500).json({ message: "Erreur serveur lors de la vérification du token", error: error.message });
   }
 };
 
