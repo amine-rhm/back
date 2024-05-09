@@ -18,11 +18,12 @@ app.use(cookieParser());
 app.use(helmet());
 const auth = require("./middleware/auth");
 const { error, Console } = require("console");
+const { userInfo } = require("os");
 const pool = mysql.createConnection({
   host: "localhost",
   user: "root",
   password: "",
-  database: "teste"
+  database: "locu"
 });
 
 app.use(express.json()) ;
@@ -54,8 +55,8 @@ pool.connect((err) => {
 });
 
 
+const saltOrRounds = 10;
 
-saltOrRounds=10;
 app.post("/api/v1/register", (req, res) => {
   try {
     const nom = req.body.nom;
@@ -63,7 +64,6 @@ app.post("/api/v1/register", (req, res) => {
     const email = req.body.email;
     const num = req.body.num;
     const password = req.body.password;
-
 
     // Vérification si l'email est déjà utilisé
     pool.query(
@@ -73,21 +73,25 @@ app.post("/api/v1/register", (req, res) => {
         if (err) {
           return res.json({ error: "Erreur dans le serveur" });
         }
-        if (result.length !== 0) {
+        if (result && result.length !== 0) {
           return res.json("L'email est déjà utilisé!");
         }
 
-        // Générer le username à partir du nom et du prénom
-        const username = nom.toLowerCase() + "_" + prenom.toLowerCase();
+        let username = "";
+        if (nom && prenom) {
+          username = nom.toLowerCase() + "_" + prenom.toLowerCase();
+        } else {
+          console.error("Erreur : nom ou prénom non défini");
+          return res.json({ error: "Nom ou prénom non défini" });
+        }
 
         // Hachage du mot de passe de l'utilisateur
         bcrypt.hash(password, saltOrRounds, (err, hash) => {
           if (err) {
             console.error("Erreur de hachage :", err);
-            console.log(hash)
             return res.json({ error: "Erreur dans le hachage" });
-
           }
+
 
           const userId = uuidv4();
           const accountId = uuidv4();
@@ -95,7 +99,7 @@ app.post("/api/v1/register", (req, res) => {
           // Ajout des données dans la table client
           pool.query(
             "INSERT INTO client (iduser, nom, prenom,num,email) VALUES (?, ?, ?, ?,?)",
-            [userId, nom, prenom,num, email],
+            [userId, nom, prenom, num, email],
             (err, result) => {
               if (err) {
                 console.error("Erreur d'insertion dans la table client:", err);
@@ -105,21 +109,17 @@ app.post("/api/v1/register", (req, res) => {
               // Ajout des données dans la table compte
               pool.query(
                 "INSERT INTO compte (idcom, username, passeword, iduser) VALUES (?,?,?,?)",
-                [accountId, username, hash,userId],
+                [accountId, username, hash, userId],
                 (err, result) => {
                   if (err) {
                     console.error("Erreur d'insertion dans la table compte:", err);
                     return res.json({ error: err.message });
                   }
 
-                  // Génération du JWT
+               
                   const token = generateJwt({ userId, email, nom, prenom, hash });
 
-                  // Envoi du cookie contenant le token
-                  res.cookie("accessToken", token, {
-                    httpOnly: true,
-                    secure: true,
-                  }).json({ token });
+                  res.json({ token: `Bearer ${token}` });
                 }
               );
             }
@@ -133,7 +133,8 @@ app.post("/api/v1/register", (req, res) => {
   }
 });
 
-  app.post("/api/v1/login", (req, res) => {
+
+app.post("/api/v1/login",(req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   pool.query(
@@ -147,11 +148,12 @@ app.post("/api/v1/register", (req, res) => {
         bcrypt.compare(password, hashedPassword, (error, response) => {
           if (response) {
             const userId = result[0].iduser;
+
             const token = generateJwt({ userId });
-            res.cookie("accessToken", token, {
-              httpOnly: true,
-              secure: true,
-            }).json({ token });
+
+            // Envoi du token dans le header au format Bearer
+            res.setHeader("Authorization", "Bearer " + token);
+            res.json({ token });
           } else {
             res.json({ message: "Wrong password" });
           }
@@ -163,19 +165,27 @@ app.post("/api/v1/register", (req, res) => {
   );
 });
 
+
 //  Logout
-app.get("/api/v1/logout", (request, response) => {
+app.get("/api/v1/logout", (req, res) => {
   try {
-    response.clearCookie("accessToken", null).send({
-      authenticated: false,
-      message: "Logout Successful.",
-    });
+
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith("Bearer")) {
+      const token = authHeader.split(" ")[1];
+      return res.json({ authenticated: false, message: "Déconnexion réussie." });
+    } else {
+
+      return res.status(401).json({ message: "Aucun jeton d'authentification fourni." });
+    }
   } catch (error) {
-    console.log(error);
+    console.error(error);
+    return res.status(500).json({ message: "Erreur lors de la déconnexion", error: error.message });
   }
 });
 
 //prover the auth
+/*
 app.get("/api/v1/verif", auth, async (req, res) => {
   try {
     const userId = req.userData.userId;
@@ -187,9 +197,37 @@ app.get("/api/v1/verif", auth, async (req, res) => {
     console.log(userId); 
   } catch (error) {
     console.error("Erreur lors de la vérification du token avec l'ID de l'utilisateur:", error);
-    res.json({ message: "Erreur serveur lors de la vérification du token avec l'ID de l'utilisateur" });
+    res.json({ message: "Erreur serveur lors de la vérification du token avec l'ID de l'utilisateur", error: error.message });
   }
 });
+
+*/
+
+app.get("/api/v1/verif", auth, async (req, res) => {
+  try {
+    const userId = req.userData.userId; 
+
+
+    const user = await pool.query("SELECT * FROM client WHERE iduser = ? ", [userId]);
+    if (!user || user.length === 0) {
+      return res.json({ message: "Utilisateur non trouvé dans la base de données" });
+    }
+    
+    res.json({ message: "Token valide"});
+    console.log(userId);
+
+  } catch (error) {
+    console.error("Erreur lors de la vérification du token avec l'ID de l'utilisateur:", error);
+    res.json({ message: "Erreur serveur lors de la vérification du token avec l'ID de l'utilisateur", error: error.message });
+  }
+});
+
+
+
+
+
+
+
 
 // Verify the current user token if authenticated
 app.get("/api/v1/that", auth, async (request, response) => {
@@ -362,8 +400,8 @@ app.post('/api/v1/new/annonce',auth, upload.array('file', 5), async (req, res) =
     if (type === "Résidentiel") {
         idres = uuidv4(); 
         await pool.query(
-            "INSERT INTO résidentiel (idres ,equipement,Ascenseur, Wifi ,Parking ,Garage,Electroménager,Camera,Climatiseur,Citerne,go,type_residence,meuble,idb) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-            [idres ,equipement,Ascenseur, Wifi ,Parking ,Garage,Electroménager,Camera,Climatiseur,Citerne,go,type_residence,meuble,idB]
+            "INSERT INTO résidentiel (idres ,equipement, meuble,type_residence, idb, Ascenseur, Wifi ,Parking ,Garage,Electroménager,Camera,Climatiseur,Citerne,go) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            [idres ,equipement, meuble,type_residence,idB, Ascenseur, Wifi ,Parking ,Garage,Electroménager,Camera,Climatiseur,Citerne,go]
         );
 
         console.log("Bien inséré dans la table résidentiel", idres); 
@@ -777,6 +815,8 @@ app.get("/api/v1/info/annonce/:id", async (request, response) => {
 
 
 
+
+
 // recuperer jusq le type de resedese (mais,app,st,villa) ---- tyi mzl tina ville et adresse g bien
 app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
   try {
@@ -786,7 +826,7 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
       CASE
       WHEN bien.type = 'Terrain' THEN CONCAT(terrain.categorie, ',', terrain.largeur, ',', terrain.longueur)
       WHEN bien.type = 'Industriel' THEN CONCAT(industriel.puissance, ',', industriel.materiel, ',', industriel.taille)
-      WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Maison' THEN CONCAT(maison.etage_maison, ',', résidentiel.meuble, ',', résidentiel.equipement, ',', résidentiel.type_residence)
+      WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Maison' THEN CONCAT(maison.etage_maison, ',', résidentiel.meuble, ',', résidentiel.equipement, ',', résidentiel.type_residence, ',', résidentiel.Ascenseur, ',', résidentiel.Wifi)
       WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN CONCAT(villa.etage_villa, ',', villa.type_villa, ',', résidentiel.meuble, ',', résidentiel.equipement,',', résidentiel.type_residence)
       WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN CONCAT(studio.idStu, ',', résidentiel.meuble, ',',  résidentiel.equipement, ',', résidentiel.type_residence)    
       WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN CONCAT(appartement.type_appartement, ',', résidentiel.meuble, ',', résidentiel.equipement, ',',  résidentiel.type_residence)    
@@ -817,6 +857,9 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
       résidentiel.meuble AS résidentiel_meuble,
       résidentiel.equipement AS résidentiel_equipement,
       résidentiel.type_residence AS résidentiel_residence,
+      résidentiel.Ascenseur AS résidentiel_Ascenseur,
+      résidentiel.Wifi AS résidentiel_Wifi,
+
       commercial.equipement AS commercial_equipement,
       commercial.etage AS commercial_etage,
       commercial.meuble AS commercial_meuble,
@@ -847,6 +890,7 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
     WHERE annonce.idann = ? `,
       [annid],
       (err, result) => {
+        
         if (err) {
           console.error(err);
           return response.json({ error: "Une erreur s'est produite lors de la récupération des détails de l'annonce." });
@@ -905,7 +949,9 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
             equipement: result[0].résidentiel_equipement,
             type_residence: result[0].résidentiel_residence,
             etage_villa: result[0].villa_etage,
-            type_villa: result[0].villa_type
+            type_villa: result[0].villa_type,
+            Ascenseur:result[0].résidentiel_Ascenseur,
+            Wifi:result[0].résidentiel_Wifi
           });
         } else if (result[0].type === 'Résidentiel' && result[0].résidentiel_residence === 'Appartement') {
           formattedData.bien_details.résidentiel = removeNullValues({
@@ -920,7 +966,9 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
             equipement: result[0].résidentiel_equipement,
             type_residence: result[0].résidentiel_residence,
             type_appartement: result[0].appartement_type,
-            etage_maison: result[0].maison_etage
+            etage_maison: result[0].maison_etage,
+            Ascenseur:result[0].résidentiel_Ascenseur,
+            Wifi:result[0].résidentiel_Wifi
           });
         } else if (result[0].type === 'Résidentiel' && result[0].résidentiel_residence === 'Studio') {
           formattedData.bien_details.résidentiel = removeNullValues({
@@ -1159,11 +1207,23 @@ app.get("/api/v1/info/pr/annonce", async (request, response) => {
           console.error(err);
           return response.json({ error: "Une erreur s'est produite lors de la récupération des détails de l'annonce." });
         }
+
         if (result.length === 0) {
           return response.json({ error: "Aucune annonce trouvée avec l'identifiant spécifié." });
         }
-      
+        
         result.forEach(row => {
+          // Créez un tableau pour stocker les images
+          row.images = [];
+          // Parcourez les images et ajoutez-les au tableau
+          for (let i = 1; i <= 5; i++) {
+            const imageField = 'image' + i;
+            if (row[imageField]) {
+              row.images.push(row[imageField]);
+              // Supprimez le champ d'image individuelle
+              delete row[imageField];
+            }
+          }
           if (row.selected_data) {
             row.selected_data = JSON.parse(row.selected_data);
           }
@@ -1177,8 +1237,6 @@ app.get("/api/v1/info/pr/annonce", async (request, response) => {
     response.json({ error: "Une erreur s'est produite lors de la récupération des détails de l'annonce." });
   }
 });
-
-
 
 app.post("/api/v1/favoris", (req, res) => {
 
