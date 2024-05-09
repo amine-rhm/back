@@ -1238,67 +1238,67 @@ app.get("/api/v1/info/pr/annonce", async (request, response) => {
   }
 });
 
+
+
+
 app.post("/api/v1/favoris", (req, res) => {
-
-    const image1 = req.files[0].filename;  
-    const image2 = req.files[1] ? req.files[1].filename : null;
-    const image3 = req.files[2] ? req.files[2].filename : null;
-    const image4 = req.files[3] ? req.files[3].filename : null;
-    const image5 = req.files[4] ? req.files[4].filename : null;
-
-  const {idann,titre, description, ville,prix ,meuble, surface, type,type_residence} = req.body;
+  const { idann } = req.body;
 
   pool.query(
-    "INSERT INTO favoris (idann,titre, description, image1, image2, image3, image4, image5, ville, adresse, prix,meuble,surface,type,type_residence) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?,?,?,?,?,?)",
-    [idann,titre, description, image1, image2, image3, image4, image5, ville, prix,meuble,surface,type,type_residence],
+    "INSERT INTO favoris (idc, idn, titre, description, image1, image2, image3, image4, image5, ville, adresse, prix, meuble, surface, type, type_residence) SELECT c.iduser, a.idann, a.titre, a.description, a.image1, a.image2, a.image3, a.image4, a.image5, NULL, NULL, NULL, NULL, NULL, NULL, NULL FROM annonce AS a INNER JOIN client AS c ON a.iduser = c.iduser WHERE a.idann = ?",
+    [idann],
     (error, result) => {
       if (error) {
         console.error(error);
-        res.json({ error: "Une erreur s'est produite lors de l'ajout de l'annonce aux favoris." });
+        res.json({
+          error:
+            "Une erreur s'est produite lors de l'ajout de l'annonce aux favoris.",
+        });
         return;
       }
 
-      res.json({ success: true, message: "Annonce ajoutée aux favoris avec succès." });
+      res.json({
+        success: true,
+        message: "Annonce ajoutée aux favoris avec succès.",
+      });
     }
   );
 });
-
-
 
 app.get("/api/v1/favoris", (req, res) => {
-  pool.query(
-    "SELECT * FROM favoris INNER JOIN client ON iduser = idc; ",
-    (error, results) => {
-      if (error) {
-        console.error(error);
-        res.json({ error: "Une erreur s'est produite lors de la récupération des annonces favorites." });
-        return;
-      }
-
-      res.json({ favoris: results });
+  pool.query("SELECT * FROM favoris", (error, results) => {
+    if (error) {
+      console.error(error);
+      res.json({
+        error:
+          "Une erreur s'est produite lors de la récupération des annonces favorites.",
+      });
+      return;
     }
-  );
+
+    res.json({ favoris: results });
+  });
 });
 
-
-
 app.delete("/api/v1/favoris", (req, res) => {
-         const idann = req.body
+  const {idn} = req.body;
   pool.query(
-
-    "DELETE FROM favoris WHERE idann=? ",
+    "DELETE FROM favoris WHERE idn=? ",
+    [idn],
     (error, results) => {
       if (error) {
         console.error(error);
-        res.json({ error: "Une erreur s'est produite lors de la suppresion de l'annonces favorite." });
+        res.json({
+          error:
+            "Une erreur s'est produite lors de la suppresion de l'annonces favorite.",
+        });
         return;
       }
-       console.log("bien supprimer dans la tabla favoris")
+      console.log("bien supprimer dans la tabla favoris");
       res.json({ deletedannonce: results });
     }
   );
 });
-
 
 
 // ville de bien ( pour la page home)
