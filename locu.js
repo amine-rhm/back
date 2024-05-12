@@ -147,10 +147,10 @@ app.post("/api/v1/login",(req, res) => {
             const userId = result[0].iduser;
             const nom=result[0].nom;
             const prenom=result[0].prenom;
-            const token = generateJwt({ userId,nom,prenom});
+            const token = generateJwt({ userId,nom,prenom,email});
             // Envoi du token dans le header au format Bearer
             res.setHeader("Authorization", "Bearer " + token);
-            res.json({ token: token, bienvenue: `${nom} ${prenom}` });
+            res.json({ token: token, bienvenue: ` nom :${nom} prenom : ${prenom}  email: ${email}` });
             console.log(`bienvenue: ${nom} ${prenom}`);
           } else {
             res.json({ message: "Wrong password" });
@@ -206,12 +206,13 @@ app.get("/api/v1/verif", auth, async (req, res) => {
     const userId = req.userData.userId;
     const nom = req.userData.nom;
     const prenom=req.userData.prenom;
+    const email=req.userData.email;
     const user = await pool.query("SELECT * FROM client WHERE iduser = ? ", [userId]);
     if (!user || user.length === 0) {
       return res.json({ message: "Utilisateur non trouvé dans la base de données" });
     }
     
-    res.json({ message: "Token valide", bienvenue: `${nom} ${prenom}` });
+    res.json({ message: "Token valide", bienvenue: ` nom:${nom} prenom: ${prenom} email: ${email}` });
 
     console.log(userId);
     console.log(`kshi dizem a: ${nom} ${prenom}`);
@@ -827,7 +828,7 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
       WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN CONCAT(villa.etage_villa, ',', villa.type_villa, ',', résidentiel.meuble, ',', résidentiel.equipement,',', résidentiel.type_residence)
       WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN CONCAT(studio.idStu, ',', résidentiel.meuble, ',',  résidentiel.equipement, ',', résidentiel.type_residence)    
       WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN CONCAT(appartement.type_appartement, ',', résidentiel.meuble, ',', résidentiel.equipement, ',',  résidentiel.type_residence)    
-      WHEN bien.type = 'Commercial' THEN CONCAT(commercial.equipement, ',', commercial.etage)
+      WHEN bien.type = 'Commercial' THEN CONCAT(commercial.etage, ',', commercial.camera_surveillance, ',',commercial.Garage, ',', commercial.Espace_Sup)
         ELSE ''
       END) AS selected_data,
       annonce.titre, 
@@ -861,10 +862,11 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
       résidentiel.Garage  AS  résidentiel_Garage,
       résidentiel.Electroménager  AS résidentiel_Elec,
       résidentiel.Climatiseur  AS résidentiel_Clim,
-       résidentiel.Citerne AS résidentiel_Citerne ,
-
-      commercial.equipement AS commercial_equipement,
+      résidentiel.Citerne AS résidentiel_Citerne ,
       commercial.etage AS commercial_etage,
+      commercial.camera_surveillance AS commercial_camera,
+      commercial.Garage AS commercial_Garage,
+      commercial.Espace_Sup AS commercial_Espace,
       commercial.meuble AS commercial_meuble,
       industriel.capacite AS industriel_capacite,
       industriel.puissance AS industriel_puissance,
@@ -954,14 +956,29 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
             etage_villa: result[0].villa_etage,
             type_villa: result[0].villa_type,
             Ascenseur:result[0].résidentiel_Ascenseur,
-            Wifi:result[0].résidentiel_Wifi
+            Wifi:result[0].résidentiel_Wifi,
+            Camera:result[0].résidentiel_Camera,
+            Parking:result[0].résidentiel_Parking,
+            Garage : result[0].résidentiel_Garage,
+            Electroménager:result[0].résidentiel_Elec,
+            Climatiseur: result[0].résidentiel_Clim,
+            Citerne: result[0]. résidentiel_Citerne 
           });
         } else if (result[0].type === 'Résidentiel' && result[0].résidentiel_residence === 'Appartement') {
           formattedData.bien_details.résidentiel = removeNullValues({
             meuble: result[0].résidentiel_meuble,
             equipement: result[0].résidentiel_equipement,
             type_residence: result[0].résidentiel_residence,
-            type_appartement: result[0].appartement_type
+            type_appartement: result[0].appartement_type,
+            Ascenseur:result[0].résidentiel_Ascenseur,
+            Wifi:result[0].résidentiel_Wifi,
+            Camera:result[0].résidentiel_Camera,
+            Parking:result[0].résidentiel_Parking,
+            Garage : result[0].résidentiel_Garage,
+            Electroménager:result[0].résidentiel_Elec,
+            Climatiseur: result[0].résidentiel_Clim,
+            Citerne: result[0]. résidentiel_Citerne 
+
           });
         } else if (result[0].type === 'Résidentiel' && result[0].résidentiel_residence === 'Maison') {
           formattedData.bien_details.résidentiel = removeNullValues({
@@ -971,7 +988,13 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
             type_appartement: result[0].appartement_type,
             etage_maison: result[0].maison_etage,
             Ascenseur:result[0].résidentiel_Ascenseur,
-            Wifi:result[0].résidentiel_Wifi
+            Wifi:result[0].résidentiel_Wifi,
+            Camera:result[0].résidentiel_Camera,
+            Parking:result[0].résidentiel_Parking,
+            Garage : result[0].résidentiel_Garage,
+            Electroménager:result[0].résidentiel_Elec,
+            Climatiseur: result[0].résidentiel_Clim,
+            Citerne: result[0]. résidentiel_Citerne 
           });
         } else if (result[0].type === 'Résidentiel' && result[0].résidentiel_residence === 'Studio') {
           formattedData.bien_details.résidentiel = removeNullValues({
@@ -979,12 +1002,22 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
             equipement: result[0].résidentiel_equipement,
             type_residence: result[0].résidentiel_residence,
             type_appartement: result[0].appartement_type,
-            etage_maison: result[0].maison_etage
+            etage_maison: result[0].maison_etage,
+            Ascenseur:result[0].résidentiel_Ascenseur,
+            Wifi:result[0].résidentiel_Wifi,
+            Camera:result[0].résidentiel_Camera,
+            Parking:result[0].résidentiel_Parking,
+            Garage : result[0].résidentiel_Garage,
+            Electroménager:result[0].résidentiel_Elec,
+            Climatiseur: result[0].résidentiel_Clim,
+            Citerne: result[0]. résidentiel_Citerne 
           });
         } else if (result[0].type === 'Commercial') {
           formattedData.bien_details.commercial = removeNullValues({
-            equipement: result[0].commercial_equipement,
             etage: result[0].commercial_etage,
+            camera_surveillance: result[0].commercial_camera,
+            Garage:result[0].commercial_Garage,
+            Espace_Sup:result[0].commercial_Espace,
             meuble: result[0].commercial_meuble
           });
         }
