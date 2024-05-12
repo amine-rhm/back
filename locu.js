@@ -150,7 +150,7 @@ app.post("/api/v1/login",(req, res) => {
             const token = generateJwt({ userId,nom,prenom});
             // Envoi du token dans le header au format Bearer
             res.setHeader("Authorization", "Bearer " + token);
-            res.json({ token });
+            res.json({ token: token, bienvenue: `${nom} ${prenom}` });
             console.log(`bienvenue: ${nom} ${prenom}`);
           } else {
             res.json({ message: "Wrong password" });
@@ -206,15 +206,13 @@ app.get("/api/v1/verif", auth, async (req, res) => {
     const userId = req.userData.userId;
     const nom = req.userData.nom;
     const prenom=req.userData.prenom;
-    
-    
-
     const user = await pool.query("SELECT * FROM client WHERE iduser = ? ", [userId]);
     if (!user || user.length === 0) {
       return res.json({ message: "Utilisateur non trouvé dans la base de données" });
     }
     
-    res.json({ message: "Token valide"});
+    res.json({ message: "Token valide", bienvenue: `${nom} ${prenom}` });
+
     console.log(userId);
     console.log(`kshi dizem a: ${nom} ${prenom}`);
 
@@ -825,7 +823,7 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
       CASE
       WHEN bien.type = 'Terrain' THEN CONCAT(terrain.categorie, ',', terrain.largeur, ',', terrain.longueur)
       WHEN bien.type = 'Industriel' THEN CONCAT(industriel.puissance, ',', industriel.materiel, ',', industriel.taille)
-      WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Maison' THEN CONCAT(maison.etage_maison, ',', résidentiel.meuble, ',', résidentiel.equipement, ',', résidentiel.type_residence, ',', résidentiel.Ascenseur, ',', résidentiel.Wifi)
+      WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Maison' THEN CONCAT(maison.etage_maison, ',', résidentiel.meuble, ',', résidentiel.equipement, ',', résidentiel.type_residence, ',', résidentiel.Ascenseur, ',', résidentiel.Wifi, ',',résidentiel.Camera, ',',résidentiel.Parking, ',', résidentiel.Garage, ',', résidentiel.Electroménager	, ',', résidentiel.Climatiseur, ',',  résidentiel.Citerne)
       WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN CONCAT(villa.etage_villa, ',', villa.type_villa, ',', résidentiel.meuble, ',', résidentiel.equipement,',', résidentiel.type_residence)
       WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN CONCAT(studio.idStu, ',', résidentiel.meuble, ',',  résidentiel.equipement, ',', résidentiel.type_residence)    
       WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN CONCAT(appartement.type_appartement, ',', résidentiel.meuble, ',', résidentiel.equipement, ',',  résidentiel.type_residence)    
@@ -858,6 +856,12 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
       résidentiel.type_residence AS résidentiel_residence,
       résidentiel.Ascenseur AS résidentiel_Ascenseur,
       résidentiel.Wifi AS résidentiel_Wifi,
+      résidentiel.Camera AS résidentiel_Camera,
+      résidentiel.Parking AS  résidentiel_Parking,
+      résidentiel.Garage  AS  résidentiel_Garage,
+      résidentiel.Electroménager  AS résidentiel_Elec,
+      résidentiel.Climatiseur  AS résidentiel_Clim,
+       résidentiel.Citerne AS résidentiel_Citerne ,
 
       commercial.equipement AS commercial_equipement,
       commercial.etage AS commercial_etage,
