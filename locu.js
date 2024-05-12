@@ -16,6 +16,7 @@ const helmet =require("helmet");
 app.use(express.static('public'));
 app.use(cookieParser());
 app.use(helmet());
+const nodemailer = require('nodemailer');
 const auth = require("./middleware/auth");
 const { error, Console } = require("console");
 const { userInfo } = require("os");
@@ -56,7 +57,6 @@ pool.connect((err) => {
 
 
 const saltOrRounds = 10;
-
 app.post("/api/v1/register", (req, res) => {
   try {
     const nom = req.body.nom;
@@ -92,7 +92,6 @@ app.post("/api/v1/register", (req, res) => {
             return res.json({ error: "Erreur dans le hachage" });
           }
 
-
           const userId = uuidv4();
           const accountId = uuidv4();
 
@@ -105,7 +104,6 @@ app.post("/api/v1/register", (req, res) => {
                 console.error("Erreur d'insertion dans la table client:", err);
                 return res.json({ error: err.message });
               }
-
               // Ajout des données dans la table compte
               pool.query(
                 "INSERT INTO compte (idcom, username, passeword, iduser) VALUES (?,?,?,?)",
@@ -115,10 +113,8 @@ app.post("/api/v1/register", (req, res) => {
                     console.error("Erreur d'insertion dans la table compte:", err);
                     return res.json({ error: err.message });
                   }
-
-               
+                  
                   const token = generateJwt({ userId, email, nom, prenom, hash });
-
                   res.json({ token: `Bearer ${token}` });
                 }
               );
@@ -142,18 +138,20 @@ app.post("/api/v1/login",(req, res) => {
     [email],
     (err, result) => {
       if (err) {
+
         res.json({ error: "Server Error" });
       } else if (result.length > 0) {
         const hashedPassword = result[0].passeword;
         bcrypt.compare(password, hashedPassword, (error, response) => {
           if (response) {
             const userId = result[0].iduser;
-
-            const token = generateJwt({ userId });
-
+            const nom=result[0].nom;
+            const prenom=result[0].prenom;
+            const token = generateJwt({ userId,nom,prenom});
             // Envoi du token dans le header au format Bearer
             res.setHeader("Authorization", "Bearer " + token);
             res.json({ token });
+            console.log(`bienvenue: ${nom} ${prenom}`);
           } else {
             res.json({ message: "Wrong password" });
           }
@@ -205,8 +203,11 @@ app.get("/api/v1/verif", auth, async (req, res) => {
 
 app.get("/api/v1/verif", auth, async (req, res) => {
   try {
-    const userId = req.userData.userId; 
-
+    const userId = req.userData.userId;
+    const nom = req.userData.nom;
+    const prenom=req.userData.prenom;
+    
+    
 
     const user = await pool.query("SELECT * FROM client WHERE iduser = ? ", [userId]);
     if (!user || user.length === 0) {
@@ -215,17 +216,13 @@ app.get("/api/v1/verif", auth, async (req, res) => {
     
     res.json({ message: "Token valide"});
     console.log(userId);
+    console.log(`kshi dizem a: ${nom} ${prenom}`);
 
   } catch (error) {
     console.error("Erreur lors de la vérification du token avec l'ID de l'utilisateur:", error);
     res.json({ message: "Erreur serveur lors de la vérification du token avec l'ID de l'utilisateur", error: error.message });
   }
 });
-
-
-
-
-
 
 
 
@@ -753,11 +750,13 @@ app.get("/api/v1/info/annonce/:id", async (request, response) => {
           titre: result[0].titre,
           description: result[0].description,
           date_ajout: result[0].date_ajout,
-          image1: result[0].image1,
-          image2: result[0].image2,
-          image3: result[0].image3,
-          image4: result[0].image4,
-          image5: result[0].image5,
+          images: [
+            result[0].image1,
+            result[0].image2,
+            result[0].image3,
+            result[0].image4,
+            result[0].image5
+          ].filter(Boolean),
           iduser: result[0].iduser,
           idB: result[0].idB,
           type: result[0].type,
@@ -995,7 +994,7 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
 });
 
 
-
+/*
  //section recement ajouter , recuperere les dernier annonce ajouter.
 app.get("/api/v1/recement/annonces", (req, res) => {
   try {
@@ -1022,6 +1021,246 @@ app.get("/api/v1/recement/annonces", (req, res) => {
   }
 });
 
+*/
+
+
+// recement ajouter
+app.get("/api/v1/recemment/annonces", async (request, response) => {
+  try {
+    await pool.query(
+      `SELECT
+        CASE
+          WHEN bien.type = 'Terrain' THEN JSON_OBJECT('categorie', terrain.categorie, 'largeur', terrain.largeur, 'longueur', terrain.longueur)
+          WHEN bien.type = 'Industriel' THEN JSON_OBJECT('puissance', industriel.puissance, 'materiel', industriel.materiel, 'taille', industriel.taille)
+          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Maison' THEN JSON_OBJECT('etage_maison', maison.etage_maison, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Commercial' THEN JSON_OBJECT('equipement', commercial.equipement, 'etage', commercial.etage)
+          ELSE JSON_OBJECT()
+        END AS selected_data,
+        annonce.titre, 
+        annonce.description, 
+        annonce.date_ajout, 
+        annonce.image1, 
+        annonce.image2, 
+        annonce.image3, 
+        annonce.image4, 
+        annonce.image5, 
+        annonce.iduser, 
+        bien.idB, 
+        bien.type, 
+        bien.surface, 
+        bien.prix, 
+        bien.userId, 
+        bien.idann,
+        bien.ville,
+        bien.adresse
+      FROM bien
+      INNER JOIN annonce ON bien.idann = annonce.idann
+      LEFT JOIN terrain ON bien.idB = terrain.idb
+      LEFT JOIN industriel ON bien.idB = industriel.idb
+      LEFT JOIN résidentiel ON bien.idB = résidentiel.idb
+      LEFT JOIN commercial ON bien.idB = commercial.idb
+      LEFT JOIN maison ON maison.idres = résidentiel.idres
+      LEFT JOIN villa ON villa.idres = résidentiel.idres
+      LEFT JOIN studio ON studio.idres = résidentiel.idres
+      LEFT JOIN appartement ON appartement.idres = résidentiel.idres`,
+      (err, result) => {
+        if (err) {
+          console.error(err);
+          return response.json({
+            error:
+              "Une erreur s'est produite lors de la récupération des détails de l'annonce.",
+          });
+        }
+        if (result.length === 0) {
+          return response.json({
+            error: "Aucune annonce trouvée avec l'identifiant spécifié.",
+          });
+        }
+
+        result.forEach((row) => {
+          if (row.selected_data) {
+            row.selected_data = JSON.parse(row.selected_data);
+          }
+          // Créer un tableau d'images à partir des propriétés image1 à image5
+          const images = [];
+          for (let i = 1; i <= 5; i++) {
+            const imageKey = `image${i}`;
+            if (row[imageKey]) {
+              images.push(row[imageKey]);
+            }
+          }
+          row.images = images;
+        });
+        const Res = result.slice(0, 12);
+        response.json(Res);
+      }
+    );
+  } catch (error) {
+    console.error(error);
+    response.json({
+      error:
+        "Une erreur s'est produite lors de la récupération des détails de l'annonce.",
+    });
+  }
+});
+
+
+/*
+app.get("/api/v1/recemment/annonces", async (request, response) => {
+  try {
+    await pool.query(
+      `SELECT
+        CASE
+          WHEN bien.type = 'Terrain' THEN JSON_OBJECT('categorie', terrain.categorie, 'largeur', terrain.largeur, 'longueur', terrain.longueur)
+          WHEN bien.type = 'Industriel' THEN JSON_OBJECT('puissance', industriel.puissance, 'materiel', industriel.materiel, 'taille', industriel.taille)
+          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Maison' THEN JSON_OBJECT('etage_maison', maison.etage_maison, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Commercial' THEN JSON_OBJECT('equipement', commercial.equipement, 'etage', commercial.etage)
+          ELSE JSON_OBJECT()
+        END AS selected_data,
+        annonce.titre, 
+        annonce.description, 
+        annonce.date_ajout, 
+        annonce.image1, 
+        annonce.image2, 
+        annonce.image3, 
+        annonce.image4, 
+        annonce.image5, 
+        annonce.iduser, 
+        bien.idB, 
+        bien.type, 
+        bien.surface, 
+        bien.prix, 
+        bien.userId, 
+        bien.idann,
+        bien.ville,
+        bien.adresse
+      FROM bien
+      INNER JOIN annonce ON bien.idann = annonce.idann
+      LEFT JOIN terrain ON bien.idB = terrain.idb
+      LEFT JOIN industriel ON bien.idB = industriel.idb
+      LEFT JOIN résidentiel ON bien.idB = résidentiel.idb
+      LEFT JOIN commercial ON bien.idB = commercial.idb
+      LEFT JOIN maison ON maison.idres = résidentiel.idres
+      LEFT JOIN villa ON villa.idres = résidentiel.idres
+      LEFT JOIN studio ON studio.idres = résidentiel.idres
+      LEFT JOIN appartement ON appartement.idres = résidentiel.idres`,
+      (err, result) => {
+        if (err) {
+          console.error(err);
+          return response.json({
+            error:
+              "Une erreur s'est produite lors de la récupération des détails de l'annonce.",
+          });
+        }
+        if (result.length === 0) {
+          return response.json({
+            error: "Aucune annonce trouvée avec l'identifiant spécifié.",
+          });
+        }
+
+        result.forEach((row) => {
+          if (row.selected_data) {
+            row.selected_data = JSON.parse(row.selected_data);
+          }
+        });
+        const Res = result.slice(0, 12);
+        response.json(Res);
+      }
+    );
+  } catch (error) {
+    console.error(error);
+    response.json({
+      error:
+        "Une erreur s'est produite lors de la récupération des détails de l'annonce.",
+    });
+  }
+});
+
+
+*/
+
+// recherche basique 
+app.get("/api/v1/basiquee/recherche", (req, res) => {
+  const { ville, prix } = req.query; 
+  if (!ville || !prix) {
+      return res.json({ error: "Veuillez fournir une ville et un prix." });
+  }
+  pool.query(
+      "SELECT \
+          CASE \
+              WHEN bien.type = 'Terrain' THEN JSON_OBJECT('categorie', terrain.categorie, 'largeur', terrain.largeur, 'longueur', terrain.longueur) \
+              WHEN bien.type = 'Industriel' THEN JSON_OBJECT('puissance', industriel.puissance, 'materiel', industriel.materiel, 'taille', industriel.taille) \
+              WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Maison' THEN JSON_OBJECT('etage_maison', maison.etage_maison, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
+              WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
+              WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
+              WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
+              WHEN bien.type = 'Commercial' THEN JSON_OBJECT('equipement', commercial.equipement, 'etage', commercial.etage) \
+              ELSE JSON_OBJECT() \
+          END AS selected_data, \
+          annonce.titre, \
+          annonce.description, \
+          annonce.date_ajout, \
+          annonce.image1, \
+          annonce.image2, \
+          annonce.image3, \
+          annonce.image4, \
+          annonce.image5, \
+          annonce.iduser, \
+          bien.idB, \
+          bien.type, \
+          bien.surface, \
+          bien.prix, \
+          bien.userId, \
+          bien.idann, \
+          bien.ville, \
+          bien.adresse \
+      FROM bien \
+      INNER JOIN annonce ON bien.idann = annonce.idann \
+      LEFT JOIN terrain ON bien.idB = terrain.idb \
+      LEFT JOIN industriel ON bien.idB = industriel.idb \
+      LEFT JOIN résidentiel ON bien.idB = résidentiel.idb \
+      LEFT JOIN commercial ON bien.idB = commercial.idb \
+      LEFT JOIN maison ON maison.idres = résidentiel.idres \
+      LEFT JOIN villa ON villa.idres = résidentiel.idres \
+      LEFT JOIN studio ON studio.idres = résidentiel.idres \
+      LEFT JOIN appartement ON appartement.idres = résidentiel.idres \
+      WHERE bien.ville = ? AND bien.prix <= ?",
+      [ville, prix],
+      (error, result) => {
+          if (error) {
+              console.error(error);
+              return res.json({ error: "Une erreur s'est produite lors de la recherche." });
+          } else {
+              result.forEach(item => {
+                  item.selected_data = JSON.parse(item.selected_data);
+                  // Créer un tableau d'images à partir des propriétés image1 à image5
+                  const images = [];
+                  for (let i = 1; i <= 5; i++) {
+                      const imageKey = `image${i}`;
+                      if (item[imageKey]) {
+                          images.push(item[imageKey]);
+                      }
+                  }
+                  item.images = images;
+              });
+              const response = {
+                  totalListing: result.length,
+                  listing: result
+              };
+              res.json(response);
+          }
+      }
+  );
+});
+
+
+/*
 app.get("/api/v1/basiquee/recherche", (req, res) => {
     const { ville, prix } = req.query; 
     if (!ville || !prix) {
@@ -1087,6 +1326,9 @@ app.get("/api/v1/basiquee/recherche", (req, res) => {
     );
 });
 
+*/
+
+/*
 // recherche avancé 
 app.get("/api/v1/avance/recherche", (req, res) => {
   const { ville, meuble, surface, type, prix } = req.query; 
@@ -1150,6 +1392,91 @@ app.get("/api/v1/avance/recherche", (req, res) => {
             result.forEach(item => {
               item.selected_data = JSON.parse(item.selected_data);
           });
+              const response = {
+                  totalListing: result.length,
+                  listing: result
+              };
+              res.json(response);
+          }
+      }
+  );
+});
+
+
+*/
+
+   // recherche avancé
+app.get("/api/v1/avance/recherche", (req, res) => {
+  const { ville, meuble, surface, type, prix } = req.query; 
+  if (!ville || !prix) {
+      return res.json({ error: "Veuillez fournir une ville et un prix." });
+  }
+  pool.query(
+      "SELECT \
+          CASE \
+              WHEN bien.type = 'Terrain' THEN JSON_OBJECT('categorie', terrain.categorie, 'largeur', terrain.largeur, 'longueur', terrain.longueur) \
+              WHEN bien.type = 'Industriel' THEN JSON_OBJECT('puissance', industriel.puissance, 'materiel', industriel.materiel, 'taille', industriel.taille) \
+              WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Maison' THEN JSON_OBJECT('etage_maison', maison.etage_maison, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
+              WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
+              WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
+              WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
+              WHEN bien.type = 'Commercial' THEN JSON_OBJECT('equipement', commercial.equipement, 'etage', commercial.etage) \
+              ELSE JSON_OBJECT() \
+          END AS selected_data, \
+          annonce.titre, \
+          annonce.description, \
+          annonce.date_ajout, \
+          annonce.image1, \
+          annonce.image2, \
+          annonce.image3, \
+          annonce.image4, \
+          annonce.image5, \
+          annonce.iduser, \
+          bien.idB, \
+          bien.type, \
+          bien.surface, \
+          bien.prix, \
+          bien.userId, \
+          bien.idann, \
+          bien.ville, \
+          bien.adresse \
+      FROM bien \
+      INNER JOIN annonce ON bien.idann = annonce.idann \
+      LEFT JOIN terrain ON bien.idB = terrain.idb \
+      LEFT JOIN industriel ON bien.idB = industriel.idb \
+      LEFT JOIN résidentiel ON bien.idB = résidentiel.idb \
+      LEFT JOIN commercial ON bien.idB = commercial.idb \
+      LEFT JOIN maison ON maison.idres = résidentiel.idres \
+      LEFT JOIN villa ON villa.idres = résidentiel.idres \
+      LEFT JOIN studio ON studio.idres = résidentiel.idres \
+      LEFT JOIN appartement ON appartement.idres = résidentiel.idres \
+      WHERE ((résidentiel.meuble = ? OR résidentiel.meuble IS NULL) OR \
+             (industriel.meuble = ? OR industriel.meuble IS NULL) OR \
+             (commercial.meuble = ? OR commercial.meuble IS NULL) OR \
+             (terrain.meuble = ? OR terrain.meuble IS NULL)) \
+        AND bien.surface = ?\
+        AND bien.ville = ? \
+        AND bien.type = ?  \
+        AND bien.prix <= ? ",
+      [meuble, meuble, meuble, meuble, surface, ville, type, prix],
+      (error, result) => {
+          if (error) {
+              console.error(error);
+              return res.json({ error: "Une erreur s'est produite lors de la recherche." });
+          } else {
+              result.forEach(item => {
+                  item.selected_data = JSON.parse(item.selected_data);
+                  // Créer un tableau d'images à partir des propriétés image1 à image5
+                  const images = [];
+                  for (let i = 1; i <= 5; i++) {
+                      const imageKey = `image${i}`;
+                      if (item[imageKey]) {
+                          images.push(item[imageKey]);
+                      }
+                  }
+                  item.images = images;
+              });
+
               const response = {
                   totalListing: result.length,
                   listing: result
@@ -1240,12 +1567,12 @@ app.get("/api/v1/info/pr/annonce", async (request, response) => {
 
 
 
-
 app.post("/api/v1/favoris", (req, res) => {
   const { idann } = req.body;
 
   pool.query(
-    "INSERT INTO favoris (idc, idn, titre, description, image1, image2, image3, image4, image5, ville, adresse, prix, meuble, surface, type, type_residence) SELECT c.iduser, a.idann, a.titre, a.description, a.image1, a.image2, a.image3, a.image4, a.image5, NULL, NULL, NULL, NULL, NULL, NULL, NULL FROM annonce AS a INNER JOIN client AS c ON a.iduser = c.iduser WHERE a.idann = ?",
+
+    "UPDATE favoris INNER JOIN annonce AS a ON favoris.idn = a.idann INNER JOIN client AS c ON a.iduser = c.iduser INNER JOIN bien AS b ON b.idann = a.idann INNER JOIN résidentiel AS re ON re.idb = b.idB SET favoris.idc = c.iduser, favoris.titre = a.titre, favoris.description = a.description, favoris.image1 = a.image1, favoris.image2 = a.image2, favoris.image3 = a.image3, favoris.image4 = a.image4, favoris.image5 = a.image5, favoris.ville = b.ville, favoris.adresse = b.adresse, favoris.prix = b.prix, favoris.meuble = re.meuble, favoris.surface = b.surface, favoris.type = b.type, favoris.type_residence = re.type_residence WHERE favoris.idn = ?",
     [idann],
     (error, result) => {
       if (error) {
@@ -1643,6 +1970,7 @@ app.get("/api/v1/type/annonces/:type", async (request, response) => {
 app.listen(3000,()=>{
 console.log("I am listen what kho ")
 })
+
 
 
 
