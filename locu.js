@@ -1627,16 +1627,27 @@ app.post("/api/v1/favoris", (req, res) => {
   );
 });
 
+
 app.get("/api/v1/favoris", (req, res) => {
-  pool.query("SELECT * FROM favoris", (error, results) => {
+  pool.query("SELECT idc,idn, titre, description, image1, image2, image3, image4, image5, ville, adresse, prix, meuble, surface, type, type_residence FROM favoris", (error, results) => {
     if (error) {
       console.error(error);
       res.json({
-        error:
-          "Une erreur s'est produite lors de la récupération des annonces favorites.",
+        error: "Une erreur s'est produite lors de la récupération des annonces favorites.",
       });
       return;
     }
+
+    results.forEach(row => {
+      row.images = [];
+      for (let i = 1; i <= 5; i++) {
+        const imageField = 'image' + i;
+        if (row[imageField]) {
+          row.images.push(row[imageField]);
+          delete row[imageField];
+        }
+      }
+    });
 
     res.json({ favoris: results });
   });
