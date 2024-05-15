@@ -1603,13 +1603,10 @@ app.get("/api/v1/info/pr/annonce", async (request, response) => {
 });
 
 
-
 app.post("/api/v1/favoris", (req, res) => {
   const { idann } = req.body;
-
   pool.query(
-
-    "UPDATE favoris INNER JOIN annonce AS a ON favoris.idn = a.idann INNER JOIN client AS c ON a.iduser = c.iduser INNER JOIN bien AS b ON b.idann = a.idann INNER JOIN résidentiel AS re ON re.idb = b.idB SET favoris.idc = c.iduser, favoris.titre = a.titre, favoris.description = a.description, favoris.image1 = a.image1, favoris.image2 = a.image2, favoris.image3 = a.image3, favoris.image4 = a.image4, favoris.image5 = a.image5, favoris.ville = b.ville, favoris.adresse = b.adresse, favoris.prix = b.prix, favoris.meuble = re.meuble, favoris.surface = b.surface, favoris.type = b.type, favoris.type_residence = re.type_residence WHERE favoris.idn = ?",
+   "INSERT INTO favoris (idc, idn, titre, description, image1, image2, image3, image4, image5, ville, adresse, prix, meuble, surface, type, type_residence) SELECT annonce.iduser AS idc, annonce.idann AS idn, annonce.titre AS titre, annonce.description AS description, annonce.image1 AS image1, annonce.image2 AS image2, annonce.image3 AS image3, annonce.image4 AS image4, annonce.image5 AS image5, bien.ville AS ville, bien.adresse AS adresse, bien.prix AS prix, CASE WHEN bien.type = 'Résidentiel' THEN résidentiel.meuble ELSE NULL END AS meuble, bien.surface AS surface, bien.type AS type, CASE WHEN bien.type = 'Résidentiel' THEN résidentiel.type_residence ELSE NULL END AS type_residence FROM annonce INNER JOIN bien ON bien.idann = annonce.idann LEFT JOIN résidentiel ON bien.idB = résidentiel.idb WHERE annonce.idann = ?",
     [idann],
     (error, result) => {
       if (error) {
