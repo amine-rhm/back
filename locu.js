@@ -1603,17 +1603,18 @@ app.get("/api/v1/info/pr/annonce", async (request, response) => {
 });
 
 
+
 app.post("/api/v1/favoris", (req, res) => {
   const { idann } = req.body;
   pool.query(
-   "INSERT INTO favoris (idc, idn, titre, description, image1, image2, image3, image4, image5, ville, adresse, prix, meuble, surface, type, type_residence) SELECT annonce.iduser AS idc, annonce.idann AS idn, annonce.titre AS titre, annonce.description AS description, annonce.image1 AS image1, annonce.image2 AS image2, annonce.image3 AS image3, annonce.image4 AS image4, annonce.image5 AS image5, bien.ville AS ville, bien.adresse AS adresse, bien.prix AS prix, CASE WHEN bien.type = 'Résidentiel' THEN résidentiel.meuble ELSE NULL END AS meuble, bien.surface AS surface, bien.type AS type, CASE WHEN bien.type = 'Résidentiel' THEN résidentiel.type_residence ELSE NULL END AS type_residence FROM annonce INNER JOIN bien ON bien.idann = annonce.idann LEFT JOIN résidentiel ON bien.idB = résidentiel.idb WHERE annonce.idann = ?",
+
+    "INSERT INTO favoris (idc, idn, titre, description, images, ville, adresse, prix, meuble, surface, type, type_residence) SELECT annonce.iduser AS idc, annonce.idann AS idn, annonce.titre AS titre, annonce.description AS description, JSON_ARRAY(annonce.image1, annonce.image2, annonce.image3, annonce.image4, annonce.image5) AS images, bien.ville AS ville, bien.adresse AS adresse, bien.prix AS prix, CASE WHEN bien.type = 'Résidentiel' THEN résidentiel.meuble ELSE NULL END AS meuble, bien.surface AS surface, bien.type AS type, CASE WHEN bien.type = 'Résidentiel' THEN résidentiel.type_residence ELSE NULL END AS type_residence FROM annonce INNER JOIN bien ON bien.idann = annonce.idann LEFT JOIN résidentiel ON bien.idB = résidentiel.idb WHERE annonce.idann = ?",
     [idann],
     (error, result) => {
       if (error) {
         console.error(error);
         res.json({
-          error:
-            "Une erreur s'est produite lors de l'ajout de l'annonce aux favoris.",
+          error: "Une erreur s'est produite lors de l'ajout de l'annonce aux favoris.",
         });
         return;
       }
