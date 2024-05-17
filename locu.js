@@ -1,5 +1,6 @@
 const express=require("express");
 const app=express();
+const util = require('util');
 const bodyParser =require( "body-parser");
 const { v4: uuidv4 } = require('uuid');
 const { generateJwt } = require("./jwt/genratetoken");
@@ -279,7 +280,36 @@ app.put('/api/v1/gere/compte', auth, async (req, res) => {
 });
 
 
-// Route d'inscription de l'administrateur
+// delete compte 
+app.delete('/api/v1/gere/compte', auth, async (req, res) => {
+  try {
+    const userId = req.userData.userId;
+
+    // Supprimer l'utilisateur des tables 'client' et 'compte'
+    pool.query('DELETE FROM client WHERE iduser = ?', [userId], (error, result) => {
+      if (error) {
+        console.error("Erreur lors de la suppression de l'utilisateur dans la table client:", error);
+        res.json({ error: "Erreur interne du serveur" });
+      } else {
+        pool.query('DELETE FROM compte WHERE iduser = ?', [userId], (error, results) => {
+          if (error) {
+            console.error("Erreur lors de la suppression de l'utilisateur dans la table compte:", error);
+            res.json({ error: "Erreur interne du serveur" });
+          } else {
+            res.json({ message: "Compte supprimé avec succès" });
+          }
+        });
+      }
+    });
+  } catch (error) {
+    console.error("Erreur lors de la suppression de l'utilisateur:", error);
+    res.json({ error: "Erreur interne du serveur" });
+  }
+});
+
+
+
+// Route d'inscription de l'administratr
 app.post("/api/v1/admin/register", async (req, res) => {
   try {
     const  admin = req.body.admin;
@@ -360,7 +390,7 @@ app.post('/api/v1/new/annonce',auth, upload.array('file', 5), async (req, res) =
     const image5 = req.files[4] ? req.files[4].filename : null;
    
     const dateAjout = new Date();
-    const { type, surface, adresse, prix, titre, description, meuble, equipement, ville, capacite, puissance, materiel, taille ,etage,categorie, largeur, longueur,type_residence,etage_maison,etage_villa, type_villa, type_appartement,Ascenseur, Wifi,Camera ,Parking ,Garage,Electroménager,Climatiseur,Citerne,go} = req.body;
+    const { type, surface, adresse, prix, titre, description, meuble, equipement, ville, capacite, puissance, materiel, taille ,etage,categorie, largeur, longueur,type_residence,etage_maison,etage_villa, type_villa, type_appartement,Ascenseur, Wifi,Camera ,Parking ,Garage,Electroménager,Climatiseur,Citerne,go,camera_surveillance,Espace_Sup} = req.body;
 
     if (!titre || !description || !prix || !description || !adresse) {
       return res.send({ message: "Ces champs sont requis."});
@@ -435,8 +465,8 @@ app.post('/api/v1/new/annonce',auth, upload.array('file', 5), async (req, res) =
     if (type === "Commercial") {
       idComm = uuidv4();
       await pool.query(
-          "INSERT INTO commercial (idComm, etage,idb) VALUES (?, ?, ?, ?)",
-          [idComm,equipement, etage,idB]
+          "INSERT INTO commercial (idComm,camera_surveillance,Garage,Espace_Sup, etage,idb) VALUES (?, ?, ?, ?,?,?)",
+          [idComm,camera_surveillance,Garage,Espace_Sup, etage,idB]
       );
       console.log("bien insérer dans la table Commercial", idComm);
   }
@@ -486,97 +516,49 @@ app.put("/api/v1/modifie/annonce/:id", auth, async (req, res) => {
 });
 
 
+// supprimer une annonce 
 
-// modifier annonce avec les image 
-app.put("/api/v1/modifier/annonce/:id", auth, upload.array('file', 5), async (req, res) => {
-  const userId = req.userData.userId;
-  try {
-    const id = req.params.id;
-    const { titre, description, date_ajout } = req.body;
-
-    let image1, image2, image3, image4, image5;
-
-    if (req.files && req.files.length > 0) {
-      image1 = req.files[0] ? req.files[0].filename : null;
-      image2 = req.files[1] ? req.files[1].filename : null;
-      image3 = req.files[2] ? req.files[2].filename : null;
-      image4 = req.files[3] ? req.files[3].filename : null;
-      image5 = req.files[4] ? req.files[4].filename : null;
-    }
-
-    await pool.query(
-      "UPDATE annonce SET titre = ?, description = ?, date_ajout = ?, iduser = ?, image1 = ?, image2 = ?, image3 = ?, image4 = ?, image5 = ? WHERE idann = ?",
-      [titre, description, date_ajout, userId, image1, image2, image3, image4, image5, id],
-      (err, result) => {
-        if (err) {
-          console.error(err);
-          return res.json({ error: "Une erreur s'est produite lors de la modification de l'annonce." });
-        }
-        if (result.affectedRows === 0) {
-          return res.status(404).json({ error: "Aucune annonce trouvée avec l'identifiant spécifié." });
-        }
-        res.json({ message: "Annonce modifiée avec succès." });
-      }
-    );
-  } catch (error) {
-    console.log(error);
-    res.json({ error: "Une erreur s'est produite lors de la modification de l'annonce." });
-  }
-});
-
-
-
-// supprimer annonce et mettre le idann dans le bien null  
 app.delete("/api/v1/delete/annonce/:id", auth, async (req, res) => {
   try {
     const id1 = req.params.id;
     const userId = req.userData.userId;
 
-    // Suppression de l'annonce de la table "annonce"
-    await pool.query(
-      "DELETE FROM annonce WHERE idann = ? AND iduser = ?",
-      [id1, userId],
-      (error, result) => {
-        if (error) {
-          console.error(error);
-          return res.status(500).json({ error: "Internal Server Error" });
-        }
+    console.log(`Attempting to delete annonce with id: ${id1} for user: ${userId}`);
 
-        if (result.affectedRows === 0) {
-          return res.status(403).json({ error: "You are not authorized to delete this listing or the listing does not exist." });
-        }
+    const query = util.promisify(pool.query).bind(pool);
+    // Suppr des liens entre l'annonce et les enregistrements dans la table "bien"
+    await query("UPDATE bien SET idann = NULL WHERE idann = ?", [id1]);
+    // Suppr de l'annonce de la table "annonce"
+    const result = await query("DELETE FROM annonce WHERE idann = ? AND iduser = ?", [id1, userId]);
+    console.log('Result of DELETE query:', result);
+    if (result.affectedRows === 0) {
+      console.log("No rows affected, user not authorized or annonce does not exist.");
+      return res.json({ error: "You are not authorized to delete this listing or the listing does not exist." });
+    }
 
-        // Suppression des liens entre l'annonce et les enregistrements dans la table "bien"
-        pool.query(
-          "UPDATE bien SET idann = NULL WHERE idann = ?",
-          [id1],
-          (error, result) => {
-            if (error) {
-              console.error(error);
-            }
-          }
-        );
+    // Récupération des images supprimées (si nécessaire)
+    const deletedImages = {
+      image1: result.image1,
+      image2: result.image2,
+      image3: result.image3,
+      image4: result.image4,
+      image5: result.image5
+    };
+    const responseJSON = {
+      message: "Annonce deleted, klsh bien dghhn",
+      deletedImages: deletedImages
+    };
+    res.json(responseJSON);
 
-        // Récupération des images supprimées (si nécessaire)
-        const deletedImages = {
-          image1: result.image1,
-          image2: result.image2,
-          image3: result.image3,
-          image4: result.image4,
-          image5: result.image5
-        };
-        const responseJSON = {
-          message: "Annonce deleted successfully",
-          deletedImages: deletedImages
-        };
-        res.json(responseJSON);
-      }
-    );
   } catch (error) {
     console.error(error);
-    res.status(500).json({ error: "Internal Server Error" });
+    res.json({ error: "Internal Server Error" });
   }
 });
+
+
+
+
 
 
 // recuperere tous les annonces 
