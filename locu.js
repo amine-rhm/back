@@ -1620,7 +1620,7 @@ app.post("/api/v1/favoris", (req, res) => {
 */
 
 
-app.post("/api/v1/favoris", (req, res) => {
+app.post("/api/v1/favoris",auth, (req, res) => {
   const { idann } = req.body;
   pool.query(
 
@@ -1664,7 +1664,7 @@ app.get("/api/v1/favoris", (req, res) => {
 
 */
 
-app.get("/api/v1/favoris", (req, res) => {
+app.get("/api/v1/favoris",auth,(req, res) => {
   pool.query("SELECT idc,idn, titre, description, image1, image2, image3, image4, image5, ville, adresse, prix, meuble, surface, type, type_residence FROM favoris", (error, results) => {
     if (error) {
       console.error(error);
@@ -1692,6 +1692,21 @@ app.get("/api/v1/favoris", (req, res) => {
  
 
 
+app.delete("/api/v1/favoris", auth, (req, res) => {
+  const { idan } = req.body;
+  pool.query(
+    "DELETE  FROM favoris WHERE idn=?",
+     [idan] ,
+      (error, results) => {
+    if (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Une erreur s'est produite lors de la suppression de l'annonce favorite." });
+    }
+    res.status(200).json({ message: "L'annonce favorite a été supprimée avec succès." });
+  });
+});
+
+ 
 
 
 
