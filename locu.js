@@ -55,7 +55,6 @@ pool.connect((err) => {
   }
 });
 
-
 const saltOrRounds = 10;
 app.post("/api/v1/register", (req, res) => {
   try {
@@ -67,29 +66,31 @@ app.post("/api/v1/register", (req, res) => {
 
     // Vérification si l'email est déjà utilisé
     pool.query(
-      `SELECT * FROM client WHERE email = ?`,
+      "SELECT * FROM client WHERE email = ?",
       [email],
       (err, result) => {
         if (err) {
-          return res.json({ error: "Erreur dans le serveur" });
+          console.error("Erreur lors de la vérification de l'email:", err);
+          return res.status(500).json({ error: "Erreur interne du serveur" });
         }
-        if (result && result.length !== 0) {
-          return res.json("L'email est déjà utilisé!");
+        if (result && result.length > 0) {
+          return res.status(400).json({ error: "L'email est déjà utilisé!" });
         }
 
+        // Génération du nom d'utilisateur
         let username = "";
         if (nom && prenom) {
-          username = nom.toLowerCase() + "_" + prenom.toLowerCase();
+          username = `${nom.toLowerCase()}_${prenom.toLowerCase()}`;
         } else {
           console.error("Erreur : nom ou prénom non défini");
-          return res.json({ error: "Nom ou prénom non défini" });
+          return res.status(400).json({ error: "Nom ou prénom non défini" });
         }
 
         // Hachage du mot de passe de l'utilisateur
         bcrypt.hash(password, saltOrRounds, (err, hash) => {
           if (err) {
             console.error("Erreur de hachage :", err);
-            return res.json({ error: "Erreur dans le hachage" });
+            return res.status(500).json({ error: "Erreur dans le hachage" });
           }
 
           const userId = uuidv4();
@@ -97,21 +98,21 @@ app.post("/api/v1/register", (req, res) => {
 
           // Ajout des données dans la table client
           pool.query(
-            "INSERT INTO client (iduser, nom, prenom,num,email) VALUES (?, ?, ?, ?,?)",
+            "INSERT INTO client (iduser, nom, prenom, num, email) VALUES (?, ?, ?, ?, ?)",
             [userId, nom, prenom, num, email],
             (err, result) => {
               if (err) {
                 console.error("Erreur d'insertion dans la table client:", err);
-                return res.json({ error: err.message });
+                return res.status(500).json({ error: "Erreur d'insertion dans la table client" });
               }
               // Ajout des données dans la table compte
               pool.query(
-                "INSERT INTO compte (idcom, username, passeword, iduser) VALUES (?,?,?,?)",
+                "INSERT INTO compte (idcom, username, passeword, iduser) VALUES (?, ?, ?, ?)",
                 [accountId, username, hash, userId],
                 (err, result) => {
                   if (err) {
                     console.error("Erreur d'insertion dans la table compte:", err);
-                    return res.json({ error: err.message });
+                    return res.status(500).json({ error: "Erreur d'insertion dans la table compte" });
                   }
                   
                   const token = generateJwt({ userId, email, nom, prenom, hash });
@@ -125,7 +126,7 @@ app.post("/api/v1/register", (req, res) => {
     );
   } catch (error) {
     console.error("Erreur lors de l'enregistrement de l'utilisateur:", error);
-    res.json({ error: "Erreur interne du serveur" });
+    res.status(500).json({ error: "Erreur interne du serveur" });
   }
 });
 
@@ -134,34 +135,31 @@ app.post("/api/v1/login",(req, res) => {
   const email = req.body.email;
   const password = req.body.password;
   pool.query(
-    'SELECT c.iduser, c.nom, c.prenom, co.passeword FROM client c INNER JOIN compte co ON c.iduser = co.iduser WHERE c.email = ?',
+    'SELECT c.iduser, c.nom, c.prenom, c.role, co.passeword FROM client c INNER JOIN compte co ON c.iduser = co.iduser WHERE c.email = ?',
     [email],
     (err, result) => {
       if (err) {
-
-        res.json({ error: "Server Error" });
+        console.error("Erreur lors de la recherche de l'utilisateur:", err);
+        return res.status(500).json({ error: "Erreur interne du serveur" });
       } else if (result.length > 0) {
-        const hashedPassword = result[0].passeword;
+        const user = result[0];
+        const hashedPassword = user.passeword;
         bcrypt.compare(password, hashedPassword, (error, response) => {
           if (response) {
-            const userId = result[0].iduser;
-            const nom=result[0].nom;
-            const prenom=result[0].prenom;
-            const token = generateJwt({ userId,nom,prenom,email});
-            // Envoi du token dans le header au format Bearer
-            res.setHeader("Authorization", "Bearer " + token);
-            res.json({ token: token, bienvenue: ` nom :${nom} prenom : ${prenom}  email: ${email}` });
-            console.log(`bienvenue: ${nom} ${prenom}`);
+            const { iduser, nom, prenom, role } = user;
+            const token = generateJwt({ userId: iduser, nom, prenom, email, role });
+            res.json({ token: `Bearer ${token}`, role });
           } else {
-            res.json({ message: "Wrong password" });
+            res.status(401).json({ error: "Mot de passe incorrect" });
           }
         });
       } else {
-        res.json({ message: "User not found" });
+        res.status(404).json({ error: "Utilisateur non trouvé" });
       }
     }
   );
 });
+
 
 
 //  Logout
@@ -181,6 +179,9 @@ app.get("/api/v1/logout", (req, res) => {
     return res.status(500).json({ message: "Erreur lors de la déconnexion", error: error.message });
   }
 });
+
+
+
 
 //prover the auth
 /*
@@ -278,79 +279,69 @@ app.put('/api/v1/gere/compte', auth, async (req, res) => {
 });
 
 
-// Enregistrement de l'administrateur
-app.post("/api/v1/admin/register", (req, res) => {
+// Route d'inscription de l'administrateur
+app.post("/api/v1/admin/register", async (req, res) => {
   try {
-    const admin = req.body.admin;
-    const password = req.body.password;
+    const  admin = req.body.admin;
+    const  password  = req.body.password;
 
     // Hachage du mot de passe de l'administrateur
-    bcrypt.hash(password, saltOrRounds, (err, hash) => {
-      if (err) {
-        console.error("Erreur de hachage :", err);
-        return res.json({ error: "Erreur dans le hachage" });
-      }
+    const hash = await bcrypt.hash(password, saltOrRounds);
+    console.log(hash)
 
-      const adminId = uuidv4();
+    const adminid = uuidv4();
 
-      // Ajout des données dans la table admin
-      pool.query(
-        "INSERT INTO admine (adminid, admin, password) VALUES (?, ?, ?)",
-        [adminId, admin, hash],
-        (err, result) => {
-          if (err) {
-            console.error("Erreur d'insertion dans la table admin:", err);
-            return res.json({ error: err.message });
-          }
+    // Ajout des données dans la table admin
+    await pool.query(
+      "INSERT INTO admine (adminid, admin, passeword) VALUES (?, ?, ?)",
+      [adminid, admin, hash]
+    );
 
-          // Génération du JWT
-          const token = generateJwt({ adminId, admin });
-
-          // Envoi du cookie contenant le token
-          res.cookie("adminAccessToken", token, {
-            httpOnly: true,
-            secure: true,
-          }).json({ token });
-        }
-      );
-    });
+    // Génération du jeton JWT
+    const token = generateJwt({ adminid, admin, hash });
+    
+    res.json({ token: `Bearer ${token}` });
   } catch (error) {
     console.error("Erreur lors de l'enregistrement de l'administrateur:", error);
-    res.json({ error: "Erreur interne du serveur" });
+    res.status(500).json({ error: "Erreur interne du serveur" });
   }
 });
 
-// Connexion de l'administrateur
 app.post("/api/v1/admin/login", (req, res) => {
-  const admin = req.body.admin;
-  const password = req.body.password;
-
+  const  admin = req.body.admin;
+  const password= req.body.password
+  
   pool.query(
-    'SELECT adminid, password FROM admine WHERE admin = ?',
+    'SELECT * FROM admine WHERE admin = ?',
     [admin],
+ 
     (err, result) => {
       if (err) {
-        res.json({ error: "Server Error" });
+        console.error("Erreur lors de la recherche de l'administrateur:", err);
+        res.status(500).json({ error: "Erreur interne du serveur" });
       } else if (result.length > 0) {
-        const hashedPassword = result[0].password;
-        bcrypt.compare(password, hashedPassword, (error, response) => {
+        const hashed = result[0].passeword;
+        console.log(hashed),
+        bcrypt.compare(password, hashed, (error, response) => {
+
           if (response) {
-            const adminId = result[0].adminid;
-            const token = generateJwt({ adminId });
-            res.cookie("adminAccessToken", token, {
-              httpOnly: true,
-              secure: true,
-            }).json({ token });
+
+            const token = generateJwt({ admin });
+            res.json({ token: `Bearer ${token}` });
+
           } else {
-            res.json({ message: "Wrong password" });
+            res.status(401).json({ error: "Mot de passe incorrect" });
           }
         });
       } else {
-        res.json({ message: "Admin not found" });
+        res.status(404).json({ error: "Utilisateur non trouvé" });
       }
+
     }
   );
 });
+
+
 
 
 
@@ -388,9 +379,6 @@ app.post('/api/v1/new/annonce',auth, upload.array('file', 5), async (req, res) =
       [idB, type,surface, prix,ville,adresse,userId, idann]
     );
     console.log("bien inserrer dans la table bien",idB)
-
-
-
 
     let idres; 
     if (type === "Résidentiel") {
@@ -447,7 +435,7 @@ app.post('/api/v1/new/annonce',auth, upload.array('file', 5), async (req, res) =
     if (type === "Commercial") {
       idComm = uuidv4();
       await pool.query(
-          "INSERT INTO commercial (idComm, equipement, etage,idb) VALUES (?, ?, ?, ?)",
+          "INSERT INTO commercial (idComm, etage,idb) VALUES (?, ?, ?, ?)",
           [idComm,equipement, etage,idB]
       );
       console.log("bien insérer dans la table Commercial", idComm);
@@ -475,12 +463,8 @@ app.put("/api/v1/modifie/annonce/:id", auth, async (req, res) => {
   try {
     const id = req.params.id;
     const userId = req.userData.userId;
-
     const { titre, description, date_ajout } = req.body;
-
-
     await pool.query(
-
     "UPDATE annonce SET titre = ?, description = ?, date_ajout = ?, iduser = ? WHERE idann = ?",
       [titre, description, date_ajout, userId, id],
       (err, result) => {
@@ -539,6 +523,7 @@ app.put("/api/v1/modifier/annonce/:id", auth, upload.array('file', 5), async (re
     res.json({ error: "Une erreur s'est produite lors de la modification de l'annonce." });
   }
 });
+
 
 
 // supprimer annonce et mettre le idann dans le bien null  
@@ -691,7 +676,7 @@ app.get("/api/v1/info/annonce/:id", async (request, response) => {
           WHEN bien.type = 'Terrain' THEN CONCAT(terrain.categorie, ',', terrain.largeur, ',', terrain.longueur,',', terrain.meuble) 
           WHEN bien.type = 'Industriel' THEN CONCAT( industriel.puissance, ',', industriel.puissance, ',', industriel.materiel, ',', industriel.taille, ',', industriel.meuble) 
           WHEN bien.type = 'Résidentiel' THEN CONCAT(résidentiel.meuble, ',', résidentiel.equipement, ',', résidentiel.type_residence) 
-        WHEN bien.type = 'Commercial' THEN CONCAT(commercial.equipement, ',', commercial.etage, ',', commercial.meuble) 
+        WHEN bien.type = 'Commercial' THEN CONCAT(commercial.etage, ',', commercial.camera_surveillance, ',',commercial.Garage, ',', commercial.Espace_Sup) 
           ELSE '' 
         END) AS selected_data, 
         annonce.titre, 
@@ -714,8 +699,10 @@ app.get("/api/v1/info/annonce/:id", async (request, response) => {
         résidentiel.meuble AS résidentiel_meuble,
         résidentiel.equipement AS résidentiel_equipement,
         résidentiel.type_residence AS résidentiel_residence,
-        commercial.equipement AS commercial_equipement,
         commercial.etage AS commercial_etage,
+        commercial.camera_surveillance AS commercial_camera,
+        commercial.Garage AS commercial_Garage,
+        commercial.Espace_Sup AS commercial_Espace,
         commercial.meuble AS commercial_meuble,
         industriel.capacite AS industriel_capacite,
         industriel.puissance AS industriel_puissance,
@@ -793,9 +780,11 @@ app.get("/api/v1/info/annonce/:id", async (request, response) => {
           });
         } else if (result[0].type === 'Commercial') {
           formattedData.bien_details.commercial = removeNullValues({
-            equipement: result[0].commercial_equipement,
             etage: result[0].commercial_etage,
-            meuble:result[0].commercial_meuble,
+            camera_surveillance: result[0].commercial_camera,
+            Garage:result[0].commercial_Garage,
+            Espace_Sup:result[0].commercial_Espace,
+            meuble: result[0].commercial_meuble
 
           });
         }
@@ -810,9 +799,6 @@ app.get("/api/v1/info/annonce/:id", async (request, response) => {
     response.json({ error: "Une erreur s'est produite lors de la récupération des détails de l'annonce." });
   }
 });
-
-
-
 
 
 // recuperer jusq le type de resedese (mais,app,st,villa) ---- tyi mzl tina ville et adresse g bien
@@ -1073,7 +1059,7 @@ app.get("/api/v1/recemment/annonces", async (request, response) => {
           WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
           WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
           WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
-          WHEN bien.type = 'Commercial' THEN JSON_OBJECT('equipement', commercial.equipement, 'etage', commercial.etage)
+          WHEN bien.type = 'Commercial' THEN JSON_OBJECT('etage', commercial.etage)
           ELSE JSON_OBJECT()
         END AS selected_data,
         annonce.titre, 
@@ -1159,6 +1145,9 @@ app.get("/api/v1/recemment/annonces", async (request, response) => {
           WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
           WHEN bien.type = 'Commercial' THEN JSON_OBJECT('equipement', commercial.equipement, 'etage', commercial.etage)
           ELSE JSON_OBJECT()
+
+
+      
         END AS selected_data,
         annonce.titre, 
         annonce.description, 
@@ -1237,7 +1226,7 @@ app.get("/api/v1/basiquee/recherche", (req, res) => {
               WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
               WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
               WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
-              WHEN bien.type = 'Commercial' THEN JSON_OBJECT('equipement', commercial.equipement, 'etage', commercial.etage) \
+              WHEN bien.type = 'Commercial' THEN JSON_OBJECT( 'etage', commercial.etage) \
               ELSE JSON_OBJECT() \
           END AS selected_data, \
           annonce.titre, \
@@ -1457,7 +1446,7 @@ app.get("/api/v1/avance/recherche", (req, res) => {
               WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
               WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
               WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
-              WHEN bien.type = 'Commercial' THEN JSON_OBJECT('equipement', commercial.equipement, 'etage', commercial.etage) \
+              WHEN bien.type = 'Commercial' THEN JSON_OBJECT( 'etage', commercial.etage) \
               ELSE JSON_OBJECT() \
           END AS selected_data, \
           annonce.titre, \
@@ -1536,7 +1525,7 @@ app.get("/api/v1/info/pr/annonce", async (request, response) => {
           WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
           WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
           WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
-          WHEN bien.type = 'Commercial' THEN JSON_OBJECT('equipement', commercial.equipement, 'etage', commercial.etage)
+          WHEN bien.type = 'Commercial' THEN JSON_OBJECT( 'etage', commercial.etage)
           ELSE JSON_OBJECT()
         END AS selected_data,
         annonce.titre, 
@@ -1602,6 +1591,33 @@ app.get("/api/v1/info/pr/annonce", async (request, response) => {
   }
 });
 
+/*
+app.post("/api/v1/favoris", (req, res) => {
+  const { idann } = req.body;
+  pool.query(
+   "INSERT INTO favoris (idc, idn, titre, description, image1, image2, image3, image4, image5, ville, adresse, prix, meuble, surface, type, type_residence) SELECT annonce.iduser AS idc, annonce.idann AS idn, annonce.titre AS titre, annonce.description AS description, annonce.image1 AS image1, annonce.image2 AS image2, annonce.image3 AS image3, annonce.image4 AS image4, annonce.image5 AS image5, bien.ville AS ville, bien.adresse AS adresse, bien.prix AS prix, CASE WHEN bien.type = 'Résidentiel' THEN résidentiel.meuble ELSE NULL END AS meuble, bien.surface AS surface, bien.type AS type, CASE WHEN bien.type = 'Résidentiel' THEN résidentiel.type_residence ELSE NULL END AS type_residence FROM annonce INNER JOIN bien ON bien.idann = annonce.idann LEFT JOIN résidentiel ON bien.idB = résidentiel.idb WHERE annonce.idann = ?",
+    [idann],
+    (error, result) => {
+      if (error) {
+        console.error(error);
+        res.json({
+          error:
+
+            "Une erreur s'est produite lors de l'ajout de l'annonce aux favoris.",
+        });
+        return;
+      }
+
+      res.json({
+        success: true,
+        message: "Annonce ajoutée aux favoris avec succès.",
+      });
+    }
+  );
+});
+
+
+*/
 
 
 app.post("/api/v1/favoris", (req, res) => {
@@ -1627,6 +1643,26 @@ app.post("/api/v1/favoris", (req, res) => {
   );
 });
 
+/*
+
+app.get("/api/v1/favoris", (req, res) => {
+  pool.query("SELECT * FROM favoris", (error, results) => {
+    if (error) {
+      console.error(error);
+      res.json({
+        error:
+          "Une erreur s'est produite lors de la récupération des annonces favorites.",
+      });
+      return;
+    }
+
+    res.json({ favoris: results });
+  });
+});
+
+
+
+*/
 
 app.get("/api/v1/favoris", (req, res) => {
   pool.query("SELECT idc,idn, titre, description, image1, image2, image3, image4, image5, ville, adresse, prix, meuble, surface, type, type_residence FROM favoris", (error, results) => {
@@ -1653,25 +1689,11 @@ app.get("/api/v1/favoris", (req, res) => {
   });
 });
 
-app.delete("/api/v1/favoris", (req, res) => {
-  const {idn} = req.body;
-  pool.query(
-    "DELETE FROM favoris WHERE idn=? ",
-    [idn],
-    (error, results) => {
-      if (error) {
-        console.error(error);
-        res.json({
-          error:
-            "Une erreur s'est produite lors de la suppresion de l'annonces favorite.",
-        });
-        return;
-      }
-      console.log("bien supprimer dans la tabla favoris");
-      res.json({ deletedannonce: results });
-    }
-  );
-});
+ 
+
+
+
+
 
 
 // ville de bien ( pour la page home)
@@ -1688,7 +1710,7 @@ app.get("/api/v1/ville/annonces/:ville", async (request, response) => {
           WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
           WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
           WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
-          WHEN bien.type = 'Commercial' THEN JSON_OBJECT('equipement', commercial.equipement, 'etage', commercial.etage)
+          WHEN bien.type = 'Commercial' THEN JSON_OBJECT('etage', commercial.etage)
           ELSE JSON_OBJECT()
         END AS selected_data,
         annonce.titre, 
@@ -1722,7 +1744,6 @@ app.get("/api/v1/ville/annonces/:ville", async (request, response) => {
         villa.type_villa AS villa_type_villa,
         studio.idStu AS studio_idStu,
         appartement.type_appartement AS appartement_type_appartement,
-        commercial.equipement AS commercial_equipement,
         commercial.etage AS commercial_etage
       FROM bien
       INNER JOIN annonce ON bien.idann = annonce.idann
@@ -1858,7 +1879,7 @@ app.get("/api/v1/type/annonces/:type", async (request, response) => {
           WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
           WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
           WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
-          WHEN bien.type = 'Commercial' THEN JSON_OBJECT('equipement', commercial.equipement, 'etage', commercial.etage)
+          WHEN bien.type = 'Commercial' THEN JSON_OBJECT('etage', commercial.etage)
           ELSE JSON_OBJECT()
         END AS selected_data,
         annonce.titre, 
@@ -1892,7 +1913,6 @@ app.get("/api/v1/type/annonces/:type", async (request, response) => {
         villa.type_villa AS villa_type_villa,
         studio.idStu AS studio_idStu,
         appartement.type_appartement AS appartement_type_appartement,
-        commercial.equipement AS commercial_equipement,
         commercial.etage AS commercial_etage
       FROM bien
       INNER JOIN annonce ON bien.idann = annonce.idann
