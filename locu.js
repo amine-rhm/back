@@ -372,10 +372,6 @@ app.post("/api/v1/admin/login", (req, res) => {
 });
 
 
-
-
-
-
 // déposer une annonce 
 app.post('/api/v1/new/annonce',auth, upload.array('file', 5), async (req, res) => {
   const userId = req.userData.userId;
@@ -517,12 +513,11 @@ app.put("/api/v1/modifie/annonce/:id", auth, async (req, res) => {
 
 
 // supprimer une annonce 
-
-app.delete("/api/v1/delete/annonce/:id", auth, async (req, res) => {
+app.delete("/api/v1/delete/annonce/:id",auth, async (req, res) => {
   try {
     const id1 = req.params.id;
     const userId = req.userData.userId;
-
+     
     console.log(`Attempting to delete annonce with id: ${id1} for user: ${userId}`);
 
     const query = util.promisify(pool.query).bind(pool);
@@ -555,6 +550,75 @@ app.delete("/api/v1/delete/annonce/:id", auth, async (req, res) => {
     res.json({ error: "Internal Server Error" });
   }
 });
+
+
+
+// supprimer une annonce  admin
+app.delete("/api/v1/delete/admin/:id", async (req, res) => {
+  try {
+    const id1 = req.params.id;
+     
+    console.log(`Attempting to delete annonce with id: ${id1} `);
+
+    const query = util.promisify(pool.query).bind(pool);
+    // Supprimer des liens entre l'annonce et les enregistrements dans la table "bien"
+    await query("UPDATE bien SET idann = NULL WHERE idann = ?", [id1]);
+    // Supprimer l'annonce de la table "annonce"
+    const result = await query("DELETE FROM annonce WHERE idann = ?", [id1]);
+    console.log('Result of DELETE query:', result);
+    if (result.affectedRows === 0) {
+      console.log("No rows affected, user not authorized or annonce does not exist.");
+      return res.json({ error: "The listing does not exist." });
+    }
+
+    // Récupération des images supprimées (si nécessaire)
+    const deletedImages = {
+      image1: result.image1,
+      image2: result.image2,
+      image3: result.image3,
+      image4: result.image4,
+      image5: result.image5
+    };
+    const responseJSON = {
+      message: "Annonce deleted successfully",
+      deletedImages: deletedImages
+    };
+    res.json(responseJSON);
+
+  } catch (error) {
+    console.error(error);
+    res.json({ error: "Internal Server Error" });
+  }
+});
+
+
+
+
+
+// recuperere tous les annonces 
+app.get("/api/v1/all/annonce", (req, res) => {
+  try {
+    pool.query(
+      "SELECT idann, titre, description, date_ajout, image1, image2, image3, image4, image5, iduser FROM annonce ORDER BY idann",
+      (error, result) => {
+        if (error) {
+      return res.status(500).json({ message: "Erreur lors de la récupération des annonces." });
+        }
+        console.log("A ce niveau, il n'y a pas d'erreur");
+        res.json({
+          totalListing:result.length,
+          listing: result
+        });
+      }
+    );
+  } catch (error) {
+    console.error(error);
+  }
+});
+
+
+
+
 
 
 
