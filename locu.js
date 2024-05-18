@@ -1665,53 +1665,58 @@ app.post("/api/v1/favoris", (req, res) => {
 
 */
 
-
-app.post("/api/v1/favoris",auth, (req, res) => {
+app.post("/api/v1/favoris", auth, (req, res) => {
   const { idann } = req.body;
-  pool.query(
+  const id = req.userData.userId; 
 
-    "INSERT INTO favoris (idc, idn, titre, description, images, ville, adresse, prix, meuble, surface, type, type_residence) SELECT annonce.iduser AS idc, annonce.idann AS idn, annonce.titre AS titre, annonce.description AS description, JSON_ARRAY(annonce.image1, annonce.image2, annonce.image3, annonce.image4, annonce.image5) AS images, bien.ville AS ville, bien.adresse AS adresse, bien.prix AS prix, CASE WHEN bien.type = 'Résidentiel' THEN résidentiel.meuble ELSE NULL END AS meuble, bien.surface AS surface, bien.type AS type, CASE WHEN bien.type = 'Résidentiel' THEN résidentiel.type_residence ELSE NULL END AS type_residence FROM annonce INNER JOIN bien ON bien.idann = annonce.idann LEFT JOIN résidentiel ON bien.idB = résidentiel.idb WHERE annonce.idann = ?",
-    [idann],
-    (error, result) => {
-      if (error) {
-        console.error(error);
-        res.json({
-          error: "Une erreur s'est produite lors de l'ajout de l'annonce aux favoris.",
-        });
-        return;
-      }
+  const query = `
+    INSERT INTO favoris (idc, idn, titre, description, image1, image2, image3, image4, image5, ville, adresse, prix, meuble, surface, type, type_residence, id) 
+    SELECT 
+      annonce.iduser AS idc, 
+      annonce.idann AS idn, 
+      annonce.titre AS titre, 
+      annonce.description AS description,
+      annonce.image1,
+      annonce.image2,
+      annonce.image3,
+      annonce.image4,
+      annonce.image5,
+      bien.ville AS ville, 
+      bien.adresse AS adresse, 
+      bien.prix AS prix, 
+      CASE WHEN bien.type = 'Résidentiel' THEN résidentiel.meuble ELSE NULL END AS meuble, 
+      bien.surface AS surface, 
+      bien.type AS type, 
+      CASE WHEN bien.type = 'Résidentiel' THEN résidentiel.type_residence ELSE NULL END AS type_residence ,
+      ? 
+    FROM annonce 
+    INNER JOIN bien ON bien.idann = annonce.idann 
+    LEFT JOIN résidentiel ON bien.idB = résidentiel.idb 
+    WHERE annonce.idann = ?`;
 
-      res.json({
-        success: true,
-        message: "Annonce ajoutée aux favoris avec succès.",
-      });
-    }
-  );
-});
-
-/*
-
-app.get("/api/v1/favoris", (req, res) => {
-  pool.query("SELECT * FROM favoris", (error, results) => {
+  pool.query(query, [id, idann], (error, result) => {
     if (error) {
       console.error(error);
       res.json({
-        error:
-          "Une erreur s'est produite lors de la récupération des annonces favorites.",
+        error: "Une erreur s'est produite lors de l'ajout de l'annonce aux favoris.",
       });
       return;
     }
 
-    res.json({ favoris: results });
+    res.json({
+      success: true,
+      message: "Annonce ajoutée aux favoris avec succès.",
+    });
   });
 });
 
 
-
-*/
-
 app.get("/api/v1/favoris",auth,(req, res) => {
-  pool.query("SELECT idc,idn, titre, description, image1, image2, image3, image4, image5, ville, adresse, prix, meuble, surface, type, type_residence FROM favoris", (error, results) => {
+  const id = req.userData.userId; 
+
+  pool.query("SELECT idc,idn, titre, description, image1, image2, image3, image4, image5, ville, adresse, prix, meuble, surface, type, type_residence,id FROM favoris where id=?",
+  [id],
+   (error, results) => {
     if (error) {
       console.error(error);
       res.json({
@@ -1738,21 +1743,20 @@ app.get("/api/v1/favoris",auth,(req, res) => {
  
 
 
-app.delete("/api/v1/favoris", auth, (req, res) => {
-  const { idan } = req.body;
+app.delete("/api/v1/favoris/:idn", auth, (req, res) => {
+  const id = req.userData.userId; 
+  const idn = req.params.idn; 
   pool.query(
-    "DELETE  FROM favoris WHERE idn=?",
-     [idan] ,
+    "DELETE FROM favoris WHERE idn = ? AND id = ?",
+     [idn, id],
       (error, results) => {
     if (error) {
       console.error(error);
-      return res.status(500).json({ error: "Une erreur s'est produite lors de la suppression de l'annonce favorite." });
+      return res.json({ error: "Une erreur s'est produite lors de la suppression de l'annonce favorite." });
     }
-    res.status(200).json({ message: "L'annonce favorite a été supprimée avec succès." });
+    res.json({ message: "L'annonce favorite a été supprimée avec succès." });
   });
 });
-
- 
 
 
 
