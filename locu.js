@@ -280,20 +280,20 @@ app.put('/api/v1/gere/compte', auth, async (req, res) => {
 });
 
 
-// delete compte 
+
+// supprimer un compte 
 app.delete('/api/v1/gere/compte', auth, async (req, res) => {
   try {
     const userId = req.userData.userId;
 
-    // Supprimer l'utilisateur des tables 'client' et 'compte'
-    pool.query('DELETE FROM client WHERE iduser = ?', [userId], (error, result) => {
+    pool.query('DELETE FROM compte WHERE iduser = ?', [userId], (error, results) => {
       if (error) {
-        console.error("Erreur lors de la suppression de l'utilisateur dans la table client:", error);
+        console.error("Erreur lors de la suppression de l'utilisateur dans la table compte:", error);
         res.json({ error: "Erreur interne du serveur" });
       } else {
-        pool.query('DELETE FROM compte WHERE iduser = ?', [userId], (error, results) => {
+        pool.query('DELETE FROM client WHERE iduser = ?', [userId], (error, result) => {
           if (error) {
-            console.error("Erreur lors de la suppression de l'utilisateur dans la table compte:", error);
+            console.error("Erreur lors de la suppression de l'utilisateur dans la table client:", error);
             res.json({ error: "Erreur interne du serveur" });
           } else {
             res.json({ message: "Compte supprimé avec succès" });
@@ -308,8 +308,7 @@ app.delete('/api/v1/gere/compte', auth, async (req, res) => {
 });
 
 
-
-// Route d'inscription de l'administratr
+// inscription de l'administratr
 app.post("/api/v1/admin/register", async (req, res) => {
   try {
     const  admin = req.body.admin;
@@ -372,7 +371,7 @@ app.post("/api/v1/admin/login", (req, res) => {
 });
 
 
-// déposer une annonce 
+// déposer une annonce  master classe yanis.
 app.post('/api/v1/new/annonce',auth, upload.array('file', 5), async (req, res) => {
   const userId = req.userData.userId;
   try {
@@ -407,7 +406,7 @@ app.post('/api/v1/new/annonce',auth, upload.array('file', 5), async (req, res) =
     console.log("bien inserrer dans la table bien",idB)
 
     let idres; 
-    if (type === "Résidentiel") {
+    if (type === "Residentiel") {
         idres = uuidv4(); 
         await pool.query(
             "INSERT INTO résidentiel (idres ,equipement, meuble,type_residence, idb, Ascenseur, Wifi ,Parking ,Garage,Electroménager,Camera,Climatiseur,Citerne,go) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
@@ -721,7 +720,7 @@ app.get("/api/v1/info/annonce/:id", async (request, response) => {
         CASE 
           WHEN bien.type = 'Terrain' THEN CONCAT(terrain.categorie, ',', terrain.largeur, ',', terrain.longueur,',', terrain.meuble) 
           WHEN bien.type = 'Industriel' THEN CONCAT( industriel.puissance, ',', industriel.puissance, ',', industriel.materiel, ',', industriel.taille, ',', industriel.meuble) 
-          WHEN bien.type = 'Résidentiel' THEN CONCAT(résidentiel.meuble, ',', résidentiel.equipement, ',', résidentiel.type_residence) 
+          WHEN bien.type = 'Residentiel' THEN CONCAT(résidentiel.meuble, ',', résidentiel.equipement, ',', résidentiel.type_residence) 
         WHEN bien.type = 'Commercial' THEN CONCAT(commercial.etage, ',', commercial.camera_surveillance, ',',commercial.Garage, ',', commercial.Espace_Sup) 
           ELSE '' 
         END) AS selected_data, 
@@ -817,7 +816,7 @@ app.get("/api/v1/info/annonce/:id", async (request, response) => {
             taille: result[0].industriel_taille,
             meuble: result[0].industriel_meuble,
           });
-        } else if (result[0].type === 'Résidentiel') {
+        } else if (result[0].type === 'Residentiel') {
           formattedData.bien_details.résidentiel = removeNullValues({
             meuble: result[0].résidentiel_meuble,
             equipement: result[0].résidentiel_equipement,
@@ -856,10 +855,10 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
       CASE
       WHEN bien.type = 'Terrain' THEN CONCAT(terrain.categorie, ',', terrain.largeur, ',', terrain.longueur)
       WHEN bien.type = 'Industriel' THEN CONCAT(industriel.puissance, ',', industriel.materiel, ',', industriel.taille)
-      WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Maison' THEN CONCAT(maison.etage_maison, ',', résidentiel.meuble, ',', résidentiel.equipement, ',', résidentiel.type_residence, ',', résidentiel.Ascenseur, ',', résidentiel.Wifi, ',',résidentiel.Camera, ',',résidentiel.Parking, ',', résidentiel.Garage, ',', résidentiel.Electroménager	, ',', résidentiel.Climatiseur, ',',  résidentiel.Citerne)
-      WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN CONCAT(villa.etage_villa, ',', villa.type_villa, ',', résidentiel.meuble, ',', résidentiel.equipement,',', résidentiel.type_residence)
-      WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN CONCAT(studio.idStu, ',', résidentiel.meuble, ',',  résidentiel.equipement, ',', résidentiel.type_residence)    
-      WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN CONCAT(appartement.type_appartement, ',', résidentiel.meuble, ',', résidentiel.equipement, ',',  résidentiel.type_residence)    
+      WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Maison' THEN CONCAT(maison.etage_maison, ',', résidentiel.meuble, ',', résidentiel.equipement, ',', résidentiel.type_residence, ',', résidentiel.Ascenseur, ',', résidentiel.Wifi, ',',résidentiel.Camera, ',',résidentiel.Parking, ',', résidentiel.Garage, ',', résidentiel.Electroménager	, ',', résidentiel.Climatiseur, ',',  résidentiel.Citerne)
+      WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Villa' THEN CONCAT(villa.etage_villa, ',', villa.type_villa, ',', résidentiel.meuble, ',', résidentiel.equipement,',', résidentiel.type_residence)
+      WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Studio' THEN CONCAT(studio.idStu, ',', résidentiel.meuble, ',',  résidentiel.equipement, ',', résidentiel.type_residence)    
+      WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Appartement' THEN CONCAT(appartement.type_appartement, ',', résidentiel.meuble, ',', résidentiel.equipement, ',',  résidentiel.type_residence)    
       WHEN bien.type = 'Commercial' THEN CONCAT(commercial.etage, ',', commercial.camera_surveillance, ',',commercial.Garage, ',', commercial.Espace_Sup)
         ELSE ''
       END) AS selected_data,
@@ -980,7 +979,7 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
             taille: result[0].industriel_taille,
             meuble: result[0].industriel_meuble
           });
-        } else if (result[0].type === 'Résidentiel' && result[0].résidentiel_residence === 'Villa') {
+        } else if (result[0].type === 'Residentiel' && result[0].résidentiel_residence === 'Villa') {
           formattedData.bien_details.résidentiel = removeNullValues({
             meuble: result[0].résidentiel_meuble,
             equipement: result[0].résidentiel_equipement,
@@ -996,7 +995,7 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
             Climatiseur: result[0].résidentiel_Clim,
             Citerne: result[0]. résidentiel_Citerne 
           });
-        } else if (result[0].type === 'Résidentiel' && result[0].résidentiel_residence === 'Appartement') {
+        } else if (result[0].type === 'Residentiel' && result[0].résidentiel_residence === 'Appartement') {
           formattedData.bien_details.résidentiel = removeNullValues({
             meuble: result[0].résidentiel_meuble,
             equipement: result[0].résidentiel_equipement,
@@ -1012,7 +1011,7 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
             Citerne: result[0]. résidentiel_Citerne 
 
           });
-        } else if (result[0].type === 'Résidentiel' && result[0].résidentiel_residence === 'Maison') {
+        } else if (result[0].type === 'Residentiel' && result[0].résidentiel_residence === 'Maison') {
           formattedData.bien_details.résidentiel = removeNullValues({
             meuble: result[0].résidentiel_meuble,
             equipement: result[0].résidentiel_equipement,
@@ -1028,7 +1027,7 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
             Climatiseur: result[0].résidentiel_Clim,
             Citerne: result[0]. résidentiel_Citerne 
           });
-        } else if (result[0].type === 'Résidentiel' && result[0].résidentiel_residence === 'Studio') {
+        } else if (result[0].type === 'Residentiel' && result[0].résidentiel_residence === 'Studio') {
           formattedData.bien_details.résidentiel = removeNullValues({
             meuble: result[0].résidentiel_meuble,
             equipement: result[0].résidentiel_equipement,
@@ -1101,10 +1100,10 @@ app.get("/api/v1/recemment/annonces", async (request, response) => {
         CASE
           WHEN bien.type = 'Terrain' THEN JSON_OBJECT('categorie', terrain.categorie, 'largeur', terrain.largeur, 'longueur', terrain.longueur)
           WHEN bien.type = 'Industriel' THEN JSON_OBJECT('puissance', industriel.puissance, 'materiel', industriel.materiel, 'taille', industriel.taille)
-          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Maison' THEN JSON_OBJECT('etage_maison', maison.etage_maison, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
-          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
-          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
-          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Maison' THEN JSON_OBJECT('etage_maison', maison.etage_maison, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
           WHEN bien.type = 'Commercial' THEN JSON_OBJECT('etage', commercial.etage)
           ELSE JSON_OBJECT()
         END AS selected_data,
@@ -1268,10 +1267,10 @@ app.get("/api/v1/basiquee/recherche", (req, res) => {
           CASE \
               WHEN bien.type = 'Terrain' THEN JSON_OBJECT('categorie', terrain.categorie, 'largeur', terrain.largeur, 'longueur', terrain.longueur) \
               WHEN bien.type = 'Industriel' THEN JSON_OBJECT('puissance', industriel.puissance, 'materiel', industriel.materiel, 'taille', industriel.taille) \
-              WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Maison' THEN JSON_OBJECT('etage_maison', maison.etage_maison, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
-              WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
-              WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
-              WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
+              WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Maison' THEN JSON_OBJECT('etage_maison', maison.etage_maison, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
+              WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
+              WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
+              WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
               WHEN bien.type = 'Commercial' THEN JSON_OBJECT( 'etage', commercial.etage) \
               ELSE JSON_OBJECT() \
           END AS selected_data, \
@@ -1477,7 +1476,7 @@ app.get("/api/v1/avance/recherche", (req, res) => {
 
 */
 
-   // recherche avancé
+// recherche avancée
 app.get("/api/v1/avance/recherche", (req, res) => {
   const { ville, meuble, surface, type, prix } = req.query; 
   if (!ville || !prix) {
@@ -1488,11 +1487,11 @@ app.get("/api/v1/avance/recherche", (req, res) => {
           CASE \
               WHEN bien.type = 'Terrain' THEN JSON_OBJECT('categorie', terrain.categorie, 'largeur', terrain.largeur, 'longueur', terrain.longueur) \
               WHEN bien.type = 'Industriel' THEN JSON_OBJECT('puissance', industriel.puissance, 'materiel', industriel.materiel, 'taille', industriel.taille) \
-              WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Maison' THEN JSON_OBJECT('etage_maison', maison.etage_maison, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
-              WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
-              WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
-              WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
-              WHEN bien.type = 'Commercial' THEN JSON_OBJECT( 'etage', commercial.etage) \
+              WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Maison' THEN JSON_OBJECT('etage_maison', maison.etage_maison, 'meuble', résidentiel.meuble, 'Ascenseur', résidentiel.Ascenseur, 'Wifi', résidentiel.Wifi, 'Camera', résidentiel.Camera, 'Parking', résidentiel.Parking, 'Garage', résidentiel.Garage, 'Electroménager', résidentiel.Electromenager, 'Climatiseur', résidentiel.Climatiseur, 'Citerne', résidentiel.Citerne, 'type_residence', résidentiel.type_residence) \
+              WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'Ascenseur', résidentiel.Ascenseur, 'Wifi', résidentiel.Wifi, 'Camera', résidentiel.Camera, 'Parking', résidentiel.Parking, 'Garage', résidentiel.Garage, 'Electroménager', résidentiel.Electromenager, 'Climatiseur', résidentiel.Climatiseur, 'Citerne', résidentiel.Citerne, 'type_residence', résidentiel.type_residence) \
+              WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'Ascenseur', résidentiel.Ascenseur, 'Wifi', résidentiel.Wifi, 'Camera', résidentiel.Camera, 'Parking', résidentiel.Parking, 'Garage', résidentiel.Garage, 'Electroménager', résidentiel.Electromenager, 'Climatiseur', résidentiel.Climatiseur, 'Citerne', résidentiel.Citerne, 'type_residence', résidentiel.type_residence) \
+              WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'Ascenseur', résidentiel.Ascenseur, 'Wifi', résidentiel.Wifi, 'Camera', résidentiel.Camera, 'Parking', résidentiel.Parking, 'Garage', résidentiel.Garage, 'Electroménager', résidentiel.Electromenager, 'Climatiseur', résidentiel.Climatiseur, 'Citerne', résidentiel.Citerne, 'type_residence', résidentiel.type_residence) \
+              WHEN bien.type = 'Commercial' THEN JSON_OBJECT('etage', commercial.etage, 'meuble', commercial.meuble, 'Espace_Sup', commercial.espace_sup, 'Garage', commercial.Garage, 'Camera_Surveillance', commercial.camera_surveillance) \
               ELSE JSON_OBJECT() \
           END AS selected_data, \
           annonce.titre, \
@@ -1526,10 +1525,10 @@ app.get("/api/v1/avance/recherche", (req, res) => {
              (industriel.meuble = ? OR industriel.meuble IS NULL) OR \
              (commercial.meuble = ? OR commercial.meuble IS NULL) OR \
              (terrain.meuble = ? OR terrain.meuble IS NULL)) \
-        AND bien.surface = ?\
+        AND bien.surface <= ? \
         AND bien.ville = ? \
-        AND bien.type = ?  \
-        AND bien.prix <= ? ",
+        AND bien.type = ? \
+        AND bien.prix <= ?",
       [meuble, meuble, meuble, meuble, surface, ville, type, prix],
       (error, result) => {
           if (error) {
@@ -1559,6 +1558,7 @@ app.get("/api/v1/avance/recherche", (req, res) => {
   );
 });
 
+
 // afficher le tout meme les table maison ....
 app.get("/api/v1/info/pr/annonce", async (request, response) => {
   try {
@@ -1567,10 +1567,10 @@ app.get("/api/v1/info/pr/annonce", async (request, response) => {
         CASE
           WHEN bien.type = 'Terrain' THEN JSON_OBJECT('categorie', terrain.categorie, 'largeur', terrain.largeur, 'longueur', terrain.longueur)
           WHEN bien.type = 'Industriel' THEN JSON_OBJECT('puissance', industriel.puissance, 'materiel', industriel.materiel, 'taille', industriel.taille)
-          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Maison' THEN JSON_OBJECT('etage_maison', maison.etage_maison, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
-          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
-          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
-          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Maison' THEN JSON_OBJECT('etage_maison', maison.etage_maison, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
           WHEN bien.type = 'Commercial' THEN JSON_OBJECT( 'etage', commercial.etage)
           ELSE JSON_OBJECT()
         END AS selected_data,
@@ -1767,10 +1767,10 @@ app.get("/api/v1/ville/annonces/:ville", async (request, response) => {
         CASE
           WHEN bien.type = 'Terrain' THEN JSON_OBJECT('categorie', terrain.categorie, 'largeur', terrain.largeur, 'longueur', terrain.longueur)
           WHEN bien.type = 'Industriel' THEN JSON_OBJECT('puissance', industriel.puissance, 'materiel', industriel.materiel, 'taille', industriel.taille)
-          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Maison' THEN JSON_OBJECT('etage_maison', maison.etage_maison, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
-          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
-          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
-          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Maison' THEN JSON_OBJECT('etage_maison', maison.etage_maison, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
           WHEN bien.type = 'Commercial' THEN JSON_OBJECT('etage', commercial.etage)
           ELSE JSON_OBJECT()
         END AS selected_data,
@@ -1850,7 +1850,7 @@ app.get("/api/v1/ville/annonces/:ville", async (request, response) => {
                 taille: row.industriel_taille
               };
               break;
-            case 'Résidentiel':
+            case 'Residentiel':
               switch (row.résidentiel_residence) {
                 case 'Maison':
                   selectedData = {
@@ -1936,10 +1936,10 @@ app.get("/api/v1/type/annonces/:type", async (request, response) => {
         CASE
           WHEN bien.type = 'Terrain' THEN JSON_OBJECT('categorie', terrain.categorie, 'largeur', terrain.largeur, 'longueur', terrain.longueur)
           WHEN bien.type = 'Industriel' THEN JSON_OBJECT('puissance', industriel.puissance, 'materiel', industriel.materiel, 'taille', industriel.taille)
-          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Maison' THEN JSON_OBJECT('etage_maison', maison.etage_maison, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
-          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
-          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
-          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Maison' THEN JSON_OBJECT('etage_maison', maison.etage_maison, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
+          WHEN bien.type = 'Residentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
           WHEN bien.type = 'Commercial' THEN JSON_OBJECT('etage', commercial.etage)
           ELSE JSON_OBJECT()
         END AS selected_data,
@@ -2019,7 +2019,7 @@ app.get("/api/v1/type/annonces/:type", async (request, response) => {
                 taille: row.industriel_taille
               };
               break;
-            case 'Résidentiel':
+            case 'Residentiel':
               switch (row.résidentiel_residence) {
                 case 'Maison':
                   selectedData = {
