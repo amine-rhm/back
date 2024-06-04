@@ -56,9 +56,7 @@ pool.connect((err) => {
   }
 });
 
-
-
-
+// system de notification
 const twilio = require('twilio');
 const dotenv = require('dotenv');
 dotenv.config();
@@ -77,8 +75,7 @@ async function sendNotificationSMS(toPhoneNumber) {
   }
 }
 
-
-//
+//register un client
 const saltOrRounds = 10;
 app.post("/api/v1/register", (req, res) => {
   try {
@@ -154,7 +151,7 @@ app.post("/api/v1/register", (req, res) => {
   }
 });
 
-
+// login
 app.post("/api/v1/login",(req, res) => {
   const email = req.body.email;
   const password = req.body.password;
@@ -184,8 +181,6 @@ app.post("/api/v1/login",(req, res) => {
   );
 });
 
-
-
 //  Logout
 app.get("/api/v1/logout", (req, res) => {
   try {
@@ -203,7 +198,6 @@ app.get("/api/v1/logout", (req, res) => {
     return res.status(500).json({ message: "Erreur lors de la déconnexion", error: error.message });
   }
 });
-
 
 
 
@@ -226,6 +220,7 @@ app.get("/api/v1/verif", auth, async (req, res) => {
 
 */
 
+// verifier le client inscrit
 app.get("/api/v1/verif", auth, async (req, res) => {
   try {
     const userId = req.userData.userId;
@@ -245,18 +240,6 @@ app.get("/api/v1/verif", auth, async (req, res) => {
   } catch (error) {
     console.error("Erreur lors de la vérification du token avec l'ID de l'utilisateur:", error);
     res.json({ message: "Erreur serveur lors de la vérification du token avec l'ID de l'utilisateur", error: error.message });
-  }
-});
-
-
-
-// Verify the current user token if authenticated
-app.get("/api/v1/that", auth, async (request, response) => {
-  try {
-    response.json(true);
-  } catch (error) {
-    console.error(error.message);
-    response.send({ msg: "Unauthenticated" });
   }
 });
 
@@ -301,8 +284,6 @@ app.put('/api/v1/gere/compte', auth, async (req, res) => {
     res.json({ error: "Erreur interne du serveur" });
   }
 });
-
-
 
 // supprimer un compte 
 app.delete('/api/v1/gere/compte', auth, async (req, res) => {
@@ -394,7 +375,7 @@ app.post("/api/v1/admin/login", (req, res) => {
 });
 
 
-// déposer une annonce  master classe yanis.
+// déposer une annonce .
 app.post('/api/v1/new/annonce',auth, upload.array('file', 5), async (req, res) => {
   const userId = req.userData.userId;
   try {
@@ -614,39 +595,6 @@ app.delete("/api/v1/delete/admin/:id", async (req, res) => {
 });
 
 
-
-
-
-// recuperere tous les annonces 
-app.get("/api/v1/all/annonce", (req, res) => {
-  try {
-    pool.query(
-      "SELECT idann, titre, description, date_ajout, image1, image2, image3, image4, image5, iduser FROM annonce ORDER BY idann",
-      (error, result) => {
-        if (error) {
-      return res.status(500).json({ message: "Erreur lors de la récupération des annonces." });
-        }
-        console.log("A ce niveau, il n'y a pas d'erreur");
-        res.json({
-          totalListing:result.length,
-          listing: result
-        });
-      }
-    );
-  } catch (error) {
-    console.error(error);
-  }
-});
-
-
-
-
-
-
-
-
-
-
 // recuperere tous les annonces 
 app.get("/api/v1/all/annonce", (req, res) => {
   try {
@@ -670,7 +618,6 @@ app.get("/api/v1/all/annonce", (req, res) => {
 
 
 // recuperer une annonce avec sans id join la tbale bien et clien 
-
 app.get("/api/v1/single/annonces/:id", async (request, response) => {
   try {
     const annid = request.params.id;
@@ -867,7 +814,6 @@ app.get("/api/v1/info/annonce/:id", async (request, response) => {
     response.json({ error: "Une erreur s'est produite lors de la récupération des détails de l'annonce." });
   }
 });
-
 
 // recuperer jusq le type de resedese (mais,app,st,villa) ---- tyi mzl tina ville et adresse g bien
 app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
@@ -1085,36 +1031,6 @@ app.get("/api/v1/info/pro/annonce/:id", async (request, response) => {
 });
 
 
-/*
- //section recement ajouter , recuperere les dernier annonce ajouter.
-app.get("/api/v1/recement/annonces", (req, res) => {
-  try {
-    pool.query(
-
-      " SELECT annonce.idann, annonce.titre, description,image1, image2, image3, image4, image5, iduser, ville, adresse, prix FROM annonce LEFT JOIN bien ON bien.idann = annonce.idann",
-      (error, result) => {
-        if (error) {
-          console.log(error);
-          res.json({ error: "Une erreur s'est produite lors de la récupération des annonces." });
-          return;
-        }
-        
-        // Triez les annonces par ID 1 2 3 4 5 
-        result.sort((a, b) => b.idann - a.idann);
-        // dayi labghit 3 4 lsl atan 12 aka
-        const dixDernieresAnnonces = result.slice(0, 12);
-        res.json({ annonces: dixDernieresAnnonces });
-      }
-    );
-  } catch (error) {
-    console.log(error);
-    res.json({ error: "Une erreur s'est produite lors de la récupération des annonces." });
-  }
-});
-
-*/
-
-
 // recement ajouter
 app.get("/api/v1/recemment/annonces", async (request, response) => {
   try {
@@ -1199,86 +1115,6 @@ app.get("/api/v1/recemment/annonces", async (request, response) => {
 });
 
 
-/*
-app.get("/api/v1/recemment/annonces", async (request, response) => {
-  try {
-    await pool.query(
-      `SELECT
-        CASE
-          WHEN bien.type = 'Terrain' THEN JSON_OBJECT('categorie', terrain.categorie, 'largeur', terrain.largeur, 'longueur', terrain.longueur)
-          WHEN bien.type = 'Industriel' THEN JSON_OBJECT('puissance', industriel.puissance, 'materiel', industriel.materiel, 'taille', industriel.taille)
-          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Maison' THEN JSON_OBJECT('etage_maison', maison.etage_maison, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
-          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
-          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
-          WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence)
-          WHEN bien.type = 'Commercial' THEN JSON_OBJECT('equipement', commercial.equipement, 'etage', commercial.etage)
-          ELSE JSON_OBJECT()
-
-
-      
-        END AS selected_data,
-        annonce.titre, 
-        annonce.description, 
-        annonce.date_ajout, 
-        annonce.image1, 
-        annonce.image2, 
-        annonce.image3, 
-        annonce.image4, 
-        annonce.image5, 
-        annonce.iduser, 
-        bien.idB, 
-        bien.type, 
-        bien.surface, 
-        bien.prix, 
-        bien.userId, 
-        bien.idann,
-        bien.ville,
-        bien.adresse
-      FROM bien
-      INNER JOIN annonce ON bien.idann = annonce.idann
-      LEFT JOIN terrain ON bien.idB = terrain.idb
-      LEFT JOIN industriel ON bien.idB = industriel.idb
-      LEFT JOIN résidentiel ON bien.idB = résidentiel.idb
-      LEFT JOIN commercial ON bien.idB = commercial.idb
-      LEFT JOIN maison ON maison.idres = résidentiel.idres
-      LEFT JOIN villa ON villa.idres = résidentiel.idres
-      LEFT JOIN studio ON studio.idres = résidentiel.idres
-      LEFT JOIN appartement ON appartement.idres = résidentiel.idres`,
-      (err, result) => {
-        if (err) {
-          console.error(err);
-          return response.json({
-            error:
-              "Une erreur s'est produite lors de la récupération des détails de l'annonce.",
-          });
-        }
-        if (result.length === 0) {
-          return response.json({
-            error: "Aucune annonce trouvée avec l'identifiant spécifié.",
-          });
-        }
-
-        result.forEach((row) => {
-          if (row.selected_data) {
-            row.selected_data = JSON.parse(row.selected_data);
-          }
-        });
-        const Res = result.slice(0, 12);
-        response.json(Res);
-      }
-    );
-  } catch (error) {
-    console.error(error);
-    response.json({
-      error:
-        "Une erreur s'est produite lors de la récupération des détails de l'annonce.",
-    });
-  }
-});
-
-
-*/
-
 // recherche basique 
 app.get("/api/v1/basiquee/recherche", (req, res) => {
   const { ville, prix } = req.query; 
@@ -1353,151 +1189,6 @@ app.get("/api/v1/basiquee/recherche", (req, res) => {
   );
 });
 
-
-/*
-app.get("/api/v1/basiquee/recherche", (req, res) => {
-    const { ville, prix } = req.query; 
-    if (!ville || !prix) {
-        return res.json({ error: "Veuillez fournir une ville et un prix." });
-    }
-    pool.query(
-        "SELECT \
-            CASE \
-                WHEN bien.type = 'Terrain' THEN JSON_OBJECT('categorie', terrain.categorie, 'largeur', terrain.largeur, 'longueur', terrain.longueur) \
-                WHEN bien.type = 'Industriel' THEN JSON_OBJECT('puissance', industriel.puissance, 'materiel', industriel.materiel, 'taille', industriel.taille) \
-                WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Maison' THEN JSON_OBJECT('etage_maison', maison.etage_maison, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
-                WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
-                WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
-                WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
-                WHEN bien.type = 'Commercial' THEN JSON_OBJECT('equipement', commercial.equipement, 'etage', commercial.etage) \
-                ELSE JSON_OBJECT() \
-            END AS selected_data, \
-            annonce.titre, \
-            annonce.description, \
-            annonce.date_ajout, \
-            annonce.image1, \
-            annonce.image2, \
-            annonce.image3, \
-            annonce.image4, \
-            annonce.image5, \
-            annonce.iduser, \
-            bien.idB, \
-            bien.type, \
-            bien.surface, \
-            bien.prix, \
-            bien.userId, \
-            bien.idann, \
-            bien.ville, \
-            bien.adresse \
-        FROM bien \
-        INNER JOIN annonce ON bien.idann = annonce.idann \
-        LEFT JOIN terrain ON bien.idB = terrain.idb \
-        LEFT JOIN industriel ON bien.idB = industriel.idb \
-        LEFT JOIN résidentiel ON bien.idB = résidentiel.idb \
-        LEFT JOIN commercial ON bien.idB = commercial.idb \
-        LEFT JOIN maison ON maison.idres = résidentiel.idres \
-        LEFT JOIN villa ON villa.idres = résidentiel.idres \
-        LEFT JOIN studio ON studio.idres = résidentiel.idres \
-        LEFT JOIN appartement ON appartement.idres = résidentiel.idres \
-        WHERE bien.ville = ? AND bien.prix <= ?",
-        [ville, prix],
-        (error, result) => {
-            if (error) {
-                console.error(error);
-                return res.json({ error: "Une erreur s'est produite lors de la recherche." });
-            } else {
-               
-                result.forEach(item => {
-                    item.selected_data = JSON.parse(item.selected_data);
-                });
-                const response = {
-                    totalListing: result.length,
-                    listing: result
-                };
-                res.json(response);
-            }
-        }
-    );
-});
-
-*/
-
-/*
-// recherche avancé 
-app.get("/api/v1/avance/recherche", (req, res) => {
-  const { ville, meuble, surface, type, prix } = req.query; 
-  if (!ville || !prix) {
-      return res.json({ error: "Veuillez fournir une ville et un prix." });
-  }
-  pool.query(
-      "SELECT \
-          CASE \
-              WHEN bien.type = 'Terrain' THEN JSON_OBJECT('categorie', terrain.categorie, 'largeur', terrain.largeur, 'longueur', terrain.longueur) \
-              WHEN bien.type = 'Industriel' THEN JSON_OBJECT('puissance', industriel.puissance, 'materiel', industriel.materiel, 'taille', industriel.taille) \
-              WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Maison' THEN JSON_OBJECT('etage_maison', maison.etage_maison, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
-              WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Villa' THEN JSON_OBJECT('etage_villa', villa.etage_villa, 'type_villa', villa.type_villa, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
-              WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Studio' THEN JSON_OBJECT('idStu', studio.idStu, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
-              WHEN bien.type = 'Résidentiel' AND résidentiel.type_residence = 'Appartement' THEN JSON_OBJECT('type_appartement', appartement.type_appartement, 'meuble', résidentiel.meuble, 'equipement', résidentiel.equipement, 'type_residence', résidentiel.type_residence) \
-              WHEN bien.type = 'Commercial' THEN JSON_OBJECT('equipement', commercial.equipement, 'etage', commercial.etage) \
-              ELSE JSON_OBJECT() \
-          END AS selected_data, \
-          annonce.titre, \
-          annonce.description, \
-          annonce.date_ajout, \
-          annonce.image1, \
-          annonce.image2, \
-          annonce.image3, \
-          annonce.image4, \
-          annonce.image5, \
-          annonce.iduser, \
-          bien.idB, \
-          bien.type, \
-          bien.surface, \
-          bien.prix, \
-          bien.userId, \
-          bien.idann, \
-          bien.ville, \
-          bien.adresse \
-      FROM bien \
-      INNER JOIN annonce ON bien.idann = annonce.idann \
-      LEFT JOIN terrain ON bien.idB = terrain.idb \
-      LEFT JOIN industriel ON bien.idB = industriel.idb \
-      LEFT JOIN résidentiel ON bien.idB = résidentiel.idb \
-      LEFT JOIN commercial ON bien.idB = commercial.idb \
-      LEFT JOIN maison ON maison.idres = résidentiel.idres \
-      LEFT JOIN villa ON villa.idres = résidentiel.idres \
-      LEFT JOIN studio ON studio.idres = résidentiel.idres \
-      LEFT JOIN appartement ON appartement.idres = résidentiel.idres \
-      WHERE ((résidentiel.meuble = ? OR résidentiel.meuble IS NULL) OR \
-             (industriel.meuble = ? OR industriel.meuble IS NULL) OR \
-             (commercial.meuble = ? OR commercial.meuble IS NULL) OR \
-             (terrain.meuble = ? OR terrain.meuble IS NULL)) \
-        AND bien.surface = ?\
-        AND bien.ville = ? \
-        AND bien.type = ?  \
-        AND bien.prix <= ? ",
-      [meuble, meuble, meuble, meuble, surface, ville, type, prix],
-      (error, result) => {
-          if (error) {
-              console.error(error);
-              return res.json({ error: "Une erreur s'est produite lors de la recherche." });
-          } else {
-
-            result.forEach(item => {
-              item.selected_data = JSON.parse(item.selected_data);
-          });
-              const response = {
-                  totalListing: result.length,
-                  listing: result
-              };
-              res.json(response);
-          }
-      }
-  );
-});
-
-
-*/
 
 // recherche avancée
 app.get("/api/v1/avance/recherche", (req, res) => {
@@ -1660,33 +1351,7 @@ app.get("/api/v1/info/pr/annonce", async (request, response) => {
   }
 });
 
-/*
-app.post("/api/v1/favoris", (req, res) => {
-  const { idann } = req.body;
-  pool.query(
-   "INSERT INTO favoris (idc, idn, titre, description, image1, image2, image3, image4, image5, ville, adresse, prix, meuble, surface, type, type_residence) SELECT annonce.iduser AS idc, annonce.idann AS idn, annonce.titre AS titre, annonce.description AS description, annonce.image1 AS image1, annonce.image2 AS image2, annonce.image3 AS image3, annonce.image4 AS image4, annonce.image5 AS image5, bien.ville AS ville, bien.adresse AS adresse, bien.prix AS prix, CASE WHEN bien.type = 'Résidentiel' THEN résidentiel.meuble ELSE NULL END AS meuble, bien.surface AS surface, bien.type AS type, CASE WHEN bien.type = 'Résidentiel' THEN résidentiel.type_residence ELSE NULL END AS type_residence FROM annonce INNER JOIN bien ON bien.idann = annonce.idann LEFT JOIN résidentiel ON bien.idB = résidentiel.idb WHERE annonce.idann = ?",
-    [idann],
-    (error, result) => {
-      if (error) {
-        console.error(error);
-        res.json({
-          error:
-
-            "Une erreur s'est produite lors de l'ajout de l'annonce aux favoris.",
-        });
-        return;
-      }
-
-      res.json({
-        success: true,
-        message: "Annonce ajoutée aux favoris avec succès.",
-      });
-    }
-  );
-});
-
-
-*/
+// ajouter favoris
 
 app.post("/api/v1/favoris", auth, (req, res) => {
   const { idann } = req.body;
@@ -1734,6 +1399,8 @@ app.post("/api/v1/favoris", auth, (req, res) => {
 });
 
 
+
+// recuperer les favoris
 app.get("/api/v1/favoris",auth,(req, res) => {
   const id = req.userData.userId; 
 
@@ -1765,7 +1432,7 @@ app.get("/api/v1/favoris",auth,(req, res) => {
 
  
 
-
+// supprimer les favoris
 app.delete("/api/v1/favoris/:idn", auth, (req, res) => {
   const id = req.userData.userId; 
   const idn = req.params.idn; 
@@ -1780,8 +1447,6 @@ app.delete("/api/v1/favoris/:idn", auth, (req, res) => {
     res.json({ message: "L'annonce favorite a été supprimée avec succès." });
   });
 });
-
-
 
 
 // ville de bien ( pour la page home)
@@ -2124,18 +1789,6 @@ app.get("/api/v1/type/annonces/:type", async (request, response) => {
 app.listen(3000,()=>{
 console.log("I am listen what kho ")
 })
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
