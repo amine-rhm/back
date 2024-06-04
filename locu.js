@@ -56,6 +56,29 @@ pool.connect((err) => {
   }
 });
 
+
+
+
+const twilio = require('twilio');
+const dotenv = require('dotenv');
+dotenv.config();
+async function sendNotificationSMS(toPhoneNumber) {
+  const formattedPhoneNumber = `+213${toPhoneNumber}`;
+  const client = new twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH_TOKEN);
+  try {
+    const message = await client.messages.create({
+      body: "Bonjour, vous êtes inscrit avec succès à notre application locu.",
+      from: '+13372678794', 
+      to: formattedPhoneNumber 
+    });
+    console.log("SMS de notification envoyé avec succès :", message.sid);
+  } catch (err) {
+    console.error("Erreur lors de l'envoi du SMS de notification :", err);
+  }
+}
+
+
+//
 const saltOrRounds = 10;
 app.post("/api/v1/register", (req, res) => {
   try {
